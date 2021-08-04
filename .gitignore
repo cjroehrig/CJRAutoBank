@@ -1,0 +1,23 @@
+#==================================================
+# Blacklist (Last match has precedence)
+
+/OLD/*
+/*
+
+# Make sure this isn't touched
+/UserScript.lua
+/mk_sample.sh
+
+#==================================================
+# Whitelist
+
+# for empty directories:
+!.gitkeep
+
+# Explicitly include our main files:
+!/.gitignore
+!/README.md
+!/CJRAutoBank.txt
+!/CJRAutoBank.lua
+!/Dump.lua
+!/sample_UserScript.lua
