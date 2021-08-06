@@ -279,6 +279,7 @@ local function isForDeconstruction(char, bag, slot, link, t, quality)
 			end
 		end
 	end
+	return false
 end
 
 
@@ -334,17 +335,7 @@ local function isInCharHoard(char, player, bag, slot)
 
 	---------------------------------------
 	elseif char == C_Calliope then
-		-- Future
-		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
-		if t == ITEMTYPE_CROWN_ITEM					then return true end
-		if name:find("^Crown") then
-			-- exceptions...
-			return true
-		end
-
-		if isEnchant(t) then return quality > QUALITY_SUPERIOR end
-		if isEquipCraft(t) and quality > QUALITY_SUPERIOR then return true end
-		if t == ITEMTYPE_POISON then return quality > QUALITY_FINE end
+		-- quester...
 
 
 	---------------------------------------
@@ -373,6 +364,18 @@ local function isInCharHoard(char, player, bag, slot)
 		-- trait mats
 		if t == ITEMTYPE_WEAPON_TRAIT 				then return true end
 		if t == ITEMTYPE_ARMOR_TRAIT 				then return true end
+
+		-- Future items
+		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
+		if t == ITEMTYPE_CROWN_ITEM					then return true end
+		if name:find("^Crown") then
+			-- exceptions...
+			return true
+		end
+
+		if isEnchant(t) then return quality > QUALITY_SUPERIOR end
+		if isEquipCraft(t) and quality > QUALITY_SUPERIOR then return true end
+		if t == ITEMTYPE_POISON then return quality > QUALITY_FINE end
 
 	---------------------------------------
 	elseif char == C_Kevin then
