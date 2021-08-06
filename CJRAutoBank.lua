@@ -16,7 +16,7 @@ CJRAB.DryRun		= false			-- don't do any transfers
 CJRAB.TransferQueue = {}
 CJRAB.TransferBags = {}
 CJRAB.TransferQueueIndex = 1
-CJRAB.TransferDelay	= 100	 -- Delay between bag transfers in ms
+CJRAB.TransferDelay	= 250	 -- Delay between bag transfers in ms
 
 
 --=============================================================================
@@ -51,9 +51,10 @@ local Dbg						= CJRAB.Dbg
 -- GetString with CUSTOM SI_ types
 
 -- CRAFTING_TYPE_*
+-- XXX: use GetSkillLineInfo to fill this in...?
 CJRAB_SI_CRAFTINGTYPE = {
 	[0]="NO_CRAFT",
-	"Blacksmithing", "Clothier", "Enchanting", "Alchemy",
+	"Blacksmithing", "Clothing", "Enchanting", "Alchemy",
 	"Provisioning", "Woodworking", "Jewelcrafting" }
 
 
@@ -157,6 +158,30 @@ end
 function CJRAB.IsCharBound(bag, slot)
 	return  IsItemBound(bag, slot) and
 			GetItemBindType(bag, slot) == BIND_TYPE_ON_PICKUP_BACKPACK
+end
+
+--=====================================
+function CJRAB.FetchLeoData()
+	-- Set up a global table CJRAB.LeoData indexed by char id
+	-- with data fetched from LeoAltholic
+	local char
+	if not LeoAltholic then return end
+	if not CJRAB.LeoData then CJRAB.LeoData = {} end
+	for char, _ in pairs(CJRAB.CharsEnabled) do
+		CJRAB.LeoData[char] = LeoAltholic.GetCharByName(CJRAB.CharName(char))
+	end
+end
+
+--=====================================
+function CJRAB.GetLeoCraftID(ctype)
+	-- Return LeoAltholic's craft ID (index) for CRAFTING_TYPE ctype.
+	local leoId, cId
+	for leoId, cId in ipairs(LeoAltholic.allCrafts) do
+		if cId == ctype then
+			return leoId
+		end
+	end
+	return nil
 end
 
 
@@ -352,19 +377,15 @@ local function cloneBag(bag)
 		-- Transfer the item in slot to the clone bag dbag
 		-- this is essentially the same as do_transfer but operates
 		-- immediately on the clone bags.
-		Dbg( "cloneBag:Transfer %s[%s] --> %s[%s]   %d %s",
+		Dbg( "cloneBag:Transfer %s[%s] --> %s[%s]   %d %s '%s'",
 			self:BagName(), slot,
 			dbag:BagName(), dstSlot,
-			count, self:ItemName(slot)
+			count, self:ItemName(slot),
+			msg
 			)
 
 		dbag:AddItem(dstSlot, self, slot, count)
 		self:RemoveItem(slot, count)
-
-		-- output message
-		if msg then
-			Dbg("cloneBag: " .. msg)
-		end
 	end;
 	}
 
@@ -485,7 +506,7 @@ local function makeTxMessage(bag, slot, dstBag, tx_count, reason)
 	end
 	if tx_count > 1 then msg = msg .. ' ' .. tx_count end
 	msg = msg .. " " .. CJRAB.ItemName(bag, slot)
-	if reason then
+	if reason and reason ~= "" then
 		msg = msg .. " (" .. reason .. ")"
 	end
 	return msg
@@ -628,51 +649,32 @@ function CJRAB:Initialize()
 			handle_tradehouse_purchase)
 	--]]
 
-	-- slash commands
-	SLASH_COMMANDS["/ab_test"] = function(extra)
-		local saved = CJRAB.DryRun
-		CJRAB.DryRun = true
-		CJRAB.OpenBanking(BAG_BANK)
-		CJRAB.CloseBanking(BAG_BANK)
-		CJRAB.DryRun = saved
-	end
-	SLASH_COMMANDS["/abdryrun"] = function(extra)
+	-- Slash commands
+	SLASH_COMMANDS["/abdryrun"] = function(arg)
 		CJRAB.DryRun = not CJRAB.DryRun
 		d("CJRAB.DryRun = " .. tostring(CJRAB.DryRun))
 	end
-	SLASH_COMMANDS["/abdebug"] = function(extra)
+
+	SLASH_COMMANDS["/abdebug"] = function(arg)
 		CJRAB.Debug = not CJRAB.Debug
 		d("CJRAB.Debug = " .. tostring(CJRAB.Debug))
 	end
-	SLASH_COMMANDS["/ablogging"] = function(extra)
+
+	SLASH_COMMANDS["/ablogging"] = function(arg)
 		CJRAB.Logging = not CJRAB.Logging
 		d("CJRAB.Logging = " .. tostring(CJRAB.Logging))
 	end
-	SLASH_COMMANDS["/abmark"] = function(extra)
-		-- run Inventory on all bag items
-		for slot in CJRAB.BagItems(BAG_BACKPACK) do
-			CJRAB.Inventory(BAG_BACKPACK, slot, nil)
-		end
-	end
+
 	SLASH_COMMANDS["/dumpbag"] = function(pat)
 		CJRAB.DumpBag(BAG_BACKPACK, pat)
 	end
+
 	SLASH_COMMANDS["/dumpbank"] = function(pat)
 		CJRAB.DumpBag(BAG_BANK, pat)
 	end
-	SLASH_COMMANDS["/dumpfcoicons"] = function(extra)
-		if not FCOIS then
-			d("FCO Item Saver is not installed")
-			return
-		end
-		local i, name
-		for i, name in ipairs(FCOIS.LAMiconsList) do
-			if name then
-				d(string.format("[%d] %s", i, name))
-			end
-		end
-	end
-	SLASH_COMMANDS["/laundry"] = function(extra) CJRAB.DumpLaundry() end
+
+	-- User slash commands
+	CJRAB.SlashCommands()
 
 end
 

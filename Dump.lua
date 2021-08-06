@@ -108,8 +108,16 @@ function CJRAB.DumpSlot(bag, slot)
 	if t == ITEMTYPE_ARMOR then
 		msg = msg .. " armtyp=" ..  
 		dstr('SI_ARMORTYPE',   GetItemLinkArmorType(link))
+	elseif t == ITEMTYPE_WEAPON then
+		msg = msg .. " weaptyp=" ..  
+		dstr('SI_WEAPONTYPE',   GetItemLinkWeaponType(link))
 	end
 
+	local ctype = GetItemLinkCraftingSkillType(link)
+	if ctype > 0 then
+		msg = msg .. " craft=" ..  
+		dstr('CJRAB_SI_CRAFTINGTYPE',   ctype)
+	end
 	
 
 	local known = IsItemLinkRecipeKnown(link)
@@ -120,7 +128,6 @@ function CJRAB.DumpSlot(bag, slot)
 
 
 	-- Defunct; not useful
---		msg = msg .. " lcraft=" .. dstr('CJRAB_SI_CRAFTINGTYPE', GetItemLinkCraftingSkillType(link))
 --	msg = msg .. " mlvl=" ..  GetItemLinkMaterialLevelDescription(link)
 
 	d(msg)
@@ -137,3 +144,29 @@ function CJRAB.DumpLaundry()
 		fence_used, fence_max, hms(fence_time),
 		launder_used, launder_max, hms(launder_time)))
 end
+
+--=====================================
+function CJRAB.DumpCraft(name)
+	-- dump craft info for char named 'name'.
+
+	CJRAB.FetchLeoData()
+	local cdata = CJRAB.LeoData[CJRAB.GetChar(name)]
+	if not cdata then
+		d(string.format("No craft info for '%s'", name))
+		return
+	end
+	local leoId, craft
+	for leoId, craft in pairs(cdata.skills.craft) do
+		local cname = craft.name
+		local clvl = craft.rank
+		-- NB: first skill is always the leveling one
+		local crank = craft.list[1].level
+		local cskillname = craft.list[1].name
+
+		d(string.format("%s:  %d:%s lvl=%d  rank=%d [%s]",
+			name, leoId, cname,
+			clvl, crank,
+			cskillname))
+	end
+end
+

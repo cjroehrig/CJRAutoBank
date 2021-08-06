@@ -24,7 +24,7 @@ local C_Charlotte		= 1
 local C_Calliope		= 2
 local C_Buffy			= 3
 local C_Gareth			= 4
-local C_Freddie			= 5
+local C_Freddy			= 5
 local C_Kevin			= 6
 
 -- Enable Auto Banking for that char
@@ -33,7 +33,7 @@ CJRAB.CharsEnabled = {
 	[C_Calliope]		= true,
 	[C_Buffy]			= true,
 	[C_Gareth]			= true,
-	[C_Freddie]			= true,
+	[C_Freddy]			= true,
 	[C_Kevin]			= true
 }
 
@@ -44,7 +44,7 @@ CJRAB_SI_CHARNAME = {
 	"Calliope",
 	"Buffy",
 	"Gareth",
-	"Freddie",
+	"Freddy",
 	"Kevin",
 }
 
@@ -90,6 +90,7 @@ local function isEnchant(t)
 	if t == ITEMTYPE_ENCHANTING_BOOSTER		 	then return true end
 	return false
 end
+
 --=====================================
 local function isAlchemy(t)
 	if t == ITEMTYPE_POTION_BASE				then return true end
@@ -97,6 +98,37 @@ local function isAlchemy(t)
 	if t == ITEMTYPE_POISON_BASE 				then return true end
 	return false
 end
+
+--=====================================
+local function isArmor(link, t)
+	if t ~= ITEMTYPE_ARMOR then return false end
+	if GetItemLinkArmorType(link) == 0 then return false end -- jewelry
+	return true
+end
+local function isJewelry(link, t)
+	if t ~= ITEMTYPE_ARMOR then return false end
+	if GetItemLinkArmorType(link) ~= 0 then return false end
+	return true
+end
+local function isWeapon(link, t)
+	if t ~= ITEMTYPE_WEAPON then return false end
+	return true
+end
+local function isGlyph(link, t)
+	if t == ITEMTYPE_GLYPH_ARMOR then return true end
+	if t == ITEMTYPE_GLYPH_WEAPON then return true end
+	if t == ITEMTYPE_GLYPH_JEWELRY then return true end
+	return false
+end
+local function isJewelryMat(link, t)
+	if t == ITEMTYPE_JEWELRYCRAFTING_MATERIAL then return true end
+	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_MATERIAL then return true end
+	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_BOOSTER then return true end
+	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_TRAIT then return true end
+	return false
+end
+
+
 --=====================================
 local function isEquipCraft(t)
 	if t == ITEMTYPE_WEAPON_BOOSTER		 		then return true end
@@ -113,6 +145,7 @@ local function isEquipCraft(t)
 	return false
 end
 
+--=====================================
 local function isEquipWritMat(link, t, quality)
 	-- Return true if link (type t) is a current rank Writ equip craft material
 	if	t == ITEMTYPE_BLACKSMITHING_MATERIAL or
@@ -128,6 +161,13 @@ local function isEquipWritMat(link, t, quality)
 	return false
 end
 
+--=============================================================================
+-- Hoard helper functions
+
+-- A global extra reason for a character transfer
+local HoardReason = ""
+
+--=====================================
 local function isCharStyle(char, bag, slot, link, t, style)
 	-- return true if this is char's style mat
 	if t ~= ITEMTYPE_STYLE_MATERIAL then return false end
@@ -150,7 +190,7 @@ local function isCharStyle(char, bag, slot, link, t, style)
 	if	   (char == C_Calliope	and style == ITEMSTYLE_RACIAL_REDGUARD)
 		or (char == C_Buffy		and style == ITEMSTYLE_RACIAL_HIGH_ELF)
 --		or (char == C_Gareth	and style == ITEMSTYLE_RACIAL_NORD)
-		or (char == C_Freddie	and style == ITEMSTYLE_RACIAL_NORD)
+		or (char == C_Freddy	and style == ITEMSTYLE_RACIAL_NORD)
 --		or (char == C_Kevin	and style == ITEMSTYLE_RACIAL_REDGUARD)
 		then
 			return true
@@ -163,8 +203,88 @@ local function isCharStyle(char, bag, slot, link, t, style)
 	end
 end
 
+--=====================================
+function CJRAB.LowestCraftLevelChar(ctype)
+	-- return the char with lowest level for CRAFTING_TYPE ctype
+	-- NB: CJRAB.FetchLeoData must have been called first.
+	if not CJRAB.LeoData then return nil end
+	local min_level = 999
+	local min_char = nil
+	local leoId = CJRAB.GetLeoCraftID(ctype)
+	local char, cdata
+
+	for char, cdata in pairs(CJRAB.LeoData) do
+		if cdata then
+			local craft = cdata.skills.craft[leoId]
+			if craft then
+				if craft.rank < min_level then
+					min_char = char
+					min_level = craft.rank
+				end
+			end
+		end
+	end
+--	Dbg("%s has lowest %s crafting (%d)", CJRAB.CharName(min_char),
+--			CJRAB.GetString('CJRAB_SI_CRAFTINGTYPE', ctype), min_level)
+	return min_char
+end
+
+--=====================================
+local function isUnresearchedTraitItem(char, link, t)
+	-- Return true if item link,t is needed for trait research by char
+	local trait
+	if isArmor(link, t) then
+		trait = GetItemLinkTraitInfo(link)
+		if trait == 0 then return false end
+		if trait == ITEM_TRAIT_TYPE_ARMOR_INTRICATE then return false end
+		if trait == ITEM_TRAIT_TYPE_ARMOR_ORNATE then return false end
+		-- if trait == ITEM_TRAIT_TYPE_ARMOR_TRAINING then return false end
+		-- XXX: just accept any traits for now
+		return true
+	elseif isWeapon(link, t) then
+		trait = GetItemLinkTraitInfo(link)
+		if trait == 0 then return false end
+		if trait == ITEM_TRAIT_TYPE_WEAPON_INTRICATE then return false end
+		if trait == ITEM_TRAIT_TYPE_WEAPON_ORNATE then return false end
+		-- if trait == ITEM_TRAIT_TYPE_WEAPON_TRAINING then return false end
+		-- XXX: just accept any traits for now
+		return true
+--	elseif isJewelry(link, t) then
+--		return false
+	end
+	return false
+end
+
+
+--=====================================
+local function isForDeconstruction(char, bag, slot, link, t, quality)
+	-- return true if the item is for deconstruction, and
+	-- set HoardReason accordingly.
+	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
+		if is_low(bag,slot) then return false end 		-- skip marked gear
+		if isUnresearchedTraitItem(C_Charlotte, link, t) then return false end
+
+		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
+			-- don't get rare mats from low-level alts; send to main instead
+			if char == C_Charlotte then
+				HoardReason = HoardReason .. "for mats deconstruction"
+				return true
+			end
+		else
+			-- send to char with the lowest skill
+			local craft = GetItemLinkCraftingSkillType(link)
+			if char == CJRAB.LowestCraftLevelChar(craft) then
+				HoardReason = HoardReason .. "for XP deconstruction"
+				return true
+			end
+		end
+	end
+end
+
+
 --=============================================================================
 -- HOARD DEFINITIONS
+
 
 --=====================================
 local function isInCharHoard(char, player, bag, slot)
@@ -178,7 +298,13 @@ local function isInCharHoard(char, player, bag, slot)
 	local trait = GetItemLinkTraitInfo(link)
 	-- if true then return false end		-- for debugging
 
+	-- distribute style mats to appropriate chars
 	if isCharStyle(char, bag, slot, link, t, style) then return true end
+
+	-- items for deconstruction if char has the lowest skill
+	if isForDeconstruction(char, bag, slot, link, t, quality) then
+		return true		
+	end
 
 	---------------------------------------
 	if char == C_Charlotte then
@@ -202,14 +328,10 @@ local function isInCharHoard(char, player, bag, slot)
 			if name:find(CURR_QUEST_ZONE) then return true end
 		end
 
-		-- any INTRICATE gear
-		if t == ITEMTYPE_ARMOR and
-						trait == ITEM_TRAIT_TYPE_ARMOR_INTRICATE then
-			return true
-		elseif t == ITEMTYPE_WEAPON and
-						trait == ITEM_TRAIT_TYPE_WEAPON_INTRICATE then
-			return true
-		end
+		-- XXX: take all empties for filling for now
+		if t == ITEMTYPE_SOUL_GEM and quality == QUALITY_NORMAL then
+									return true end -- empty Soul gems
+
 	---------------------------------------
 	elseif char == C_Calliope then
 		-- Future
@@ -247,7 +369,7 @@ local function isInCharHoard(char, player, bag, slot)
 		end
 
 	---------------------------------------
-	elseif char == C_Freddie then
+	elseif char == C_Freddy then
 		-- trait mats
 		if t == ITEMTYPE_WEAPON_TRAIT 				then return true end
 		if t == ITEMTYPE_ARMOR_TRAIT 				then return true end
@@ -255,12 +377,25 @@ local function isInCharHoard(char, player, bag, slot)
 	---------------------------------------
 	elseif char == C_Kevin then
 		-- Provisioning ingredients not marked as Writ
-		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then return true end
+		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
+			HoardReason = HoardReason .. "stores unused ingredients"
+			return true
+		end
+
+		-- low level (previous writ) food
+		if t == ITEMTYPE_FOOD or t == ITEMTYPE_DRINK then
+			if is_low(bag,slot) then
+				HoardReason = HoardReason .. "outleveled food for guild"
+				return true
+			end
+		end
+
 		-- out-leveled Equip crafting mats (manually deposited)
 		if	isEquipCraft(t) then
 			local minRank = GetItemLinkRequiredCraftingSkillRank(link)
 			if minRank < CURR_ALT_EQUIP_WRIT_RANK and
 					quality < QUALITY_FINE then
+				HoardReason = HoardReason .. "outleveled mats"
 				return true
 			end
 		end
@@ -291,14 +426,11 @@ local function isInBankHoard(bankBag, bag, slot)
 	local link = GetItemLink(bag, slot)
 	local icon, stack, sellprice, usable, locked, equiptype, style, quality =
             GetItemInfo(bag, slot)
-	local trait = GetItemLinkTraitInfo(link)
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
 		if isEnchant(t) and quality <= QUALITY_SUPERIOR then return true end
 
-		if t == ITEMTYPE_SOUL_GEM and quality == QUALITY_NORMAL then
-									return true end -- empty Soul gems
 		if t== ITEMTYPE_RECIPE and IsItemLinkRecipeKnown(link) then
 									return true end
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then return true end
@@ -313,21 +445,11 @@ local function isInBankHoard(bankBag, bag, slot)
 		-- Equipment (b/c/w) Writ mats (only for current rank)
 		if isEquipWritMat(link, t, quality) then return true end
 
-		-- Bank all trait Research items
-		-- TX all intricate to Charlotte
-		if t == ITEMTYPE_ARMOR and trait ~=0 and
-			GetItemLinkArmorType(link) ~= 0 and		-- 0 == jewelry
-			(trait ~= ITEM_TRAIT_TYPE_ARMOR_INTRICATE
-								or char ~= C_Charlotte) and
-			trait ~= ITEM_TRAIT_TYPE_ARMOR_ORNATE and
-			trait ~= ITEM_TRAIT_TYPE_ARMOR_TRAINING then
-			return true
-		end
-		if t == ITEMTYPE_WEAPON and trait ~=0 and
-			(trait ~= ITEM_TRAIT_TYPE_WEAPON_INTRICATE
-								or char ~= C_Charlotte) and
-			trait ~= ITEM_TRAIT_TYPE_WEAPON_ORNATE and
-			trait ~= ITEM_TRAIT_TYPE_WEAPON_TRAINING then
+		-- Bank all unknown trait Research items for Charlotte
+		-- (but leave them in the bank)
+		if isUnresearchedTraitItem(C_Charlotte, link, t) and
+					not is_low(bag, slot) then		-- skip marked gear
+			HoardReason = HoardReason .. "for Charlotte to research"
 			return true
 		end
 	end
@@ -346,6 +468,7 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 
 	for slot in CJRAB.BagItems(bag) do
 		local link = GetItemLink(bag, slot, 1)
+		HoardReason = ""
 
 		if 		not CJRAB.IsCharBound(bag, slot) and 
 				not IsItemStolen(bag, slot) and
@@ -364,6 +487,9 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 			end
 
 			if reason then
+				if HoardReason ~= "" then
+					reason = reason .. ", " .. HoardReason
+				end
 				if onlyFillExisting then
 					CJRAB.TransferFill(bag, slot, bankBag, reason)
 				else
@@ -378,8 +504,9 @@ end
 local function withdrawHoardables( char, bankBag )
 	local slot, str, count
 	for slot in CJRAB.BagItems(bankBag) do
+		HoardReason = ""
 		if isInCharHoard(char, char, bankBag, slot) then
-			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK)
+			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
 		end
 	end
 end
@@ -434,6 +561,9 @@ function CJRAB.OpenBanking(bankBag)
 		end
 	end
 
+	-- get (copy) LeoAltholic data once here
+	CJRAB:FetchLeoData()
+
 	-- Step 0:  Stack all items in the bank and bags
 	-- XXX: don't do this; I suspect it doesn't complete before the
 	-- TransferPlan starts and things stack incorrectly.
@@ -459,6 +589,7 @@ end
 
 --=====================================
 function CJRAB.CloseBanking(bankBag)
+	Msg("See you next time.")
 end
 
 --=====================================
@@ -481,12 +612,18 @@ function CJRAB.Inventory(bag, slot, reason)
 	if trait == ITEM_TRAIT_TYPE_WEAPON_ORNATE then isJunk=true end
 	if trait == ITEM_TRAIT_TYPE_ARMOR_ORNATE then isJunk=true end
 	if trait == ITEM_TRAIT_TYPE_JEWELRY_ORNATE then isJunk=true end
+
 	-- unused mats
+	--[[
 	if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
 		if quality < QUALITY_FINE then
 			isJunk=true
 		end
 	end
+	]]--
+
+	-- jewelery (don't have Summerset)
+	if isJewelryMat(link, t) then isJunk = true end
 
 	---------------------------------------
 	if isJunk then
