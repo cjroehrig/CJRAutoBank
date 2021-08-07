@@ -695,16 +695,15 @@ function CJRAB:Initialize()
 		d("CJRAB.Logging = " .. tostring(CJRAB.Logging))
 	end
 
-	SLASH_COMMANDS["/dumpbag"] = function(pat)
-		CJRAB.DumpBag(BAG_BACKPACK, pat)
-	end
-
-	SLASH_COMMANDS["/dumpbank"] = function(pat)
-		CJRAB.DumpBag(BAG_BANK, pat)
-	end
+	SLASH_COMMANDS["/dumpbag"] = function(pat) CJRAB.DumpBag(BAG_BACKPACK, pat) end
+	SLASH_COMMANDS["/dumpbank"] = function(pat) CJRAB.DumpBag(BAG_BANK, pat) end
+	SLASH_COMMANDS["/dumpchar"] = function(name) CJRAB.DumpChar(name) end
+	SLASH_COMMANDS["/dumpcharraw"] = function(name) CJRAB.DumpCharRaw(name) end
 
 	-- User slash commands
-	CJRAB.SlashCommands()
+	if CJRAB.SlashCommands then
+		CJRAB.SlashCommands()
+	end
 
 end
 

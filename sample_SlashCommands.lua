@@ -55,9 +55,6 @@ function CJRAB.SlashCommands()
 		end
 	end
 
-	SLASH_COMMANDS["/dumpchar"] = function(name) CJRAB.DumpChar(name) end
-	SLASH_COMMANDS["/dumpcharraw"] = function(name) CJRAB.DumpCharRaw(name) end
-
 	SLASH_COMMANDS["/stragglers"] = function(name)
 		CJRAB.FetchLeoData()
 		for craft, craftname in pairs(CJRAB_SI_CRAFTINGTYPE) do
