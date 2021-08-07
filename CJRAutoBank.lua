@@ -9,7 +9,6 @@ CJRAB.AddonName = 'CJRAutoBank'
 -- these can be toggled via slashcommands
 CJRAB.Logging		= true			-- log all inventory in/out
 CJRAB.Debug			= false			-- log debug messages
-
 CJRAB.DryRun		= false			-- don't do any transfers
 
 -- TransferQueue
@@ -98,26 +97,53 @@ function CJRAB.GetString(stype, n)
 end
 
 --=============================================================================
--- MISC UTILITY FUNCTIONS
+-- Character
+CJRAB.Chars = nil
+
+function CJRAB.InitChars()
+	-- initialize character table
+	CJRAB.Chars = {}
+	for i = 1, GetNumCharacters() do
+		local name, gender, level, classId, raceId,
+					allianceId, id, locId = GetCharacterInfo(i)
+		local enabled = false
+		if CJRAB.CharsEnabled then
+			enabled = CJRAB.CharsEnabled[i]
+		end
+			
+		CJRAB.Chars[i] = {
+			name		= zo_strformat("<<1>>", name),
+			gender  	= gender,
+			level		= level,
+			classId		= classId,
+			raceId		= raceId,
+			allianceId 	= allianceId,
+			locationId	= locId,
+			enabled		= enabled,
+		}
+	end
+end
 
 --=====================================
 function CJRAB.CharName(char)
 	-- return the character name for id 'char'
-	-- Requires CJRAB_SI_CHARNAME to be defined in UserScript.
-	return CJRAB.GetString('CJRAB_SI_CHARNAME', char)
+	return CJRAB.Chars[char].name
 end
 
 --=====================================
-function CJRAB.GetChar(name)
-	-- Return the char id for character called name.
-	local id, n
-	for id, n in ipairs(CJRAB_SI_CHARNAME) do
-		if n == name then
-			return id
+function CJRAB.GetChar(str)
+	-- Return the char index for character called str.
+	for i = 1, #CJRAB.Chars do
+		if CJRAB.Chars[i].name == str then
+			return i
 		end
 	end
 	return nil
 end
+
+--=============================================================================
+-- MISC UTILITY FUNCTIONS
+
 
 --=====================================
 function CJRAB.ItemName(bag, slot)
@@ -164,10 +190,9 @@ end
 function CJRAB.FetchLeoData()
 	-- Set up a global table CJRAB.LeoData indexed by char id
 	-- with data fetched from LeoAltholic
-	local char
 	if not LeoAltholic then return end
 	if not CJRAB.LeoData then CJRAB.LeoData = {} end
-	for char, _ in pairs(CJRAB.CharsEnabled) do
+	for char = 1, #CJRAB.Chars do
 		CJRAB.LeoData[char] = LeoAltholic.GetCharByName(CJRAB.CharName(char))
 	end
 end
@@ -175,7 +200,6 @@ end
 --=====================================
 function CJRAB.GetLeoCraftID(ctype)
 	-- Return LeoAltholic's craft ID (index) for CRAFTING_TYPE ctype.
-	local leoId, cId
 	for leoId, cId in ipairs(LeoAltholic.allCrafts) do
 		if cId == ctype then
 			return leoId
@@ -390,7 +414,6 @@ local function cloneBag(bag)
 	}
 
 	-- copy the bag contents into our instance
-	local slot
 	for slot = 0, GetBagSize(bag)-1 do
 		if HasItemInSlot(bag, slot) then
 			local stack, max = GetSlotStackSize(bag, slot)
@@ -507,7 +530,7 @@ local function makeTxMessage(bag, slot, dstBag, tx_count, reason)
 	if tx_count > 1 then msg = msg .. ' ' .. tx_count end
 	msg = msg .. " " .. CJRAB.ItemName(bag, slot)
 	if reason and reason ~= "" then
-		msg = msg .. " (" .. reason .. ")"
+		msg = msg .. " " .. reason
 	end
 	return msg
 end
@@ -594,38 +617,45 @@ local function handle_slot(event, bag, slot, isNewItem,
 		CJRAB.LogSlotUpdate(bag, slot, isNewItem, stackCountChange)
 	end
 	if stackCountChange > 0 then
-		CJRAB.Inventory(bag, slot, reason)
+		if CJRAB.Inventory then
+			CJRAB.Inventory(bag, slot, reason)
+		end
 	end
 end
 
 --=============================================================================
 -- HANDLER: EVENT_OPEN_BANK, EVENT_CLOSE_BANK
 local function handle_open_bank(event, bankBag)
-	CJRAB.OpenBanking(bankBag)
+	if CJRAB.OpenBanking then
+		CJRAB.OpenBanking(bankBag)
+	end
 end
 local function handle_close_bank(event, bankBag)
-	CJRAB.CloseBanking(bankBag)
+	if CJRAB.CloseBanking then
+		CJRAB.CloseBanking(bankBag)
+	end
 end
 
 --=============================================================================
 -- HANDLER: EVENT_TRADING_HOUSE_CONFIRM_ITEM_PURCHASE
 local function handle_tradehouse_purchase(event, idx)
-		CJRAB.LogTradeHousePurchase(event, idx)
+	CJRAB.LogTradeHousePurchase(event, idx)
 end
 
 --=============================================================================
 -- HANDLER: EVENT_ADD_ON_LOADED
 local function handle_addon_loaded(event, addonName)
-	if addonName == CJRAB.AddonName then
-		CJRAB:Initialize()
-		EVENT_MANAGER:UnregisterForEvent(CJRAB.AddonName, EVENT_ADD_ON_LOADED)
-	end
+	if addonName ~= CJRAB.AddonName then return end
+	EVENT_MANAGER:UnregisterForEvent(CJRAB.AddonName, EVENT_ADD_ON_LOADED)
+	CJRAB:Initialize()
 end
 
 
 --=============================================================================
 -- INITIALIZE
 function CJRAB:Initialize()
+	-- initialize characters
+	CJRAB.InitChars()
 
 	-- handle_slot
 	EVENT_MANAGER:RegisterForEvent( self.AddonName,

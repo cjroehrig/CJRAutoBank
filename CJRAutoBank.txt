@@ -6,6 +6,7 @@
 ## APIVersion: 100035
 ## DependsOn: 
 
+Config.lua
 CJRAutoBank.lua
 Dump.lua
 UserScript.lua

@@ -4,9 +4,11 @@
 /OLD/*
 /*
 
-# Make sure this isn't touched
-/UserScript.lua
+# Make sure these aren't touched:
 /mk_sample.sh
+/Config.lua
+/SlashCommands.lua
+/UserScript.lua
 
 #==================================================
 # Whitelist
@@ -20,4 +22,6 @@
 !/CJRAutoBank.txt
 !/CJRAutoBank.lua
 !/Dump.lua
+!/sample_Config.lua
+!/sample_SlashCommands.lua
 !/sample_UserScript.lua

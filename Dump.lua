@@ -35,7 +35,6 @@ end
 
 --=====================================
 function CJRAB.DumpBag(bag, pat)
-	local slot
 	for slot = 0, GetBagSize(bag)-1 do
 		if HasItemInSlot(bag, slot) then
 			if pat and pat ~= "" then
@@ -81,11 +80,8 @@ function CJRAB.DumpSlot(bag, slot)
 	msg = msg .. " qual=" .. dstr('SI_ITEMQUALITY', quality)
 	msg = msg .. " lvl=" ..  GetItemLevel(bag, slot)
 	if style > 0 then
-		-- msg = msg .. " style=" .. dstr('ITEM_STYLE_NAME', style)
-		msg = msg .. " style=" .. dstr('SI_ITEMSTYLE', style)
-		msg = msg .. string.format(" race=%d:%s",
-					GetUnitRaceId("player"),
-					GetUnitRace("player") )
+		msg = msg .. string.format(" style=%d:%s", style,
+					GetItemStyleName(style))
 		-- if IsSmithingStyleKnown(style,...?
 
 	end
@@ -155,7 +151,6 @@ function CJRAB.DumpCraft(name)
 		d(string.format("No craft info for '%s'", name))
 		return
 	end
-	local leoId, craft
 	for leoId, craft in pairs(cdata.skills.craft) do
 		local cname = craft.name
 		local clvl = craft.rank
@@ -167,6 +162,61 @@ function CJRAB.DumpCraft(name)
 			name, leoId, cname,
 			clvl, crank,
 			cskillname))
+	end
+end
+
+--=====================================
+function CJRAB.DumpChar(str)
+	-- dump our char info for char named 'str', or all if 'all'
+	if not str or str == "" then str = GetUnitName("player") end
+	for i = 1, #CJRAB.Chars do
+		local c = CJRAB.Chars[i]
+		if str == c.name or str == "all" then
+			local msg
+			msg = string.format("%d: %s", i, c.name)
+			msg = msg ..  string.format(" level %d", c.level)
+			if c.gender == GENDER_MALE then msg = msg .. " male"
+			elseif c.gender == GENDER_FEMALE then msg = msg .. " female"
+			elseif c.gender == GENDER_NEUTRAL then msg = msg .. " neutered"
+			end
+			msg = msg ..  string.format(" %d:%s",
+						c.raceId, GetRaceName(c.gender, c.raceId))
+			msg = msg ..  string.format(" %d:%s",
+						c.classId, GetClassName(c.gender, c.classId))
+			msg = msg ..  string.format(" [%d:%s]",
+						c.allianceId, GetAllianceName(c.allianceId))
+			msg = msg ..  string.format(" in %d:%s", 
+						c.locationId, GetLocationName(c.locationId))
+			d(msg)
+		end
+	end
+end
+--=====================================
+function CJRAB.DumpCharRaw(str)
+	-- dump raw char info for char named 'str', or all if 'all'
+	if not str or str == "" then str = GetUnitName("player") end
+
+	for i = 1, GetNumCharacters() do
+		local name, gender, level, classId, raceId,
+					allianceId, id, locationId = GetCharacterInfo(i)
+		if str == name or str == "all" then
+			local msg
+			msg = string.format("%d: %s [%s]:", i, zo_strformat("<<1>>",name), id)
+			msg = msg ..  string.format(" level %d", level)
+			if gender == GENDER_MALE then msg = msg .. " male"
+			elseif gender == GENDER_FEMALE then msg = msg .. " female"
+			elseif gender == GENDER_NEUTRAL then msg = msg .. " neutered"
+			end
+			msg = msg ..  string.format(" %d:%s", 
+						raceId, GetRaceName(gender, raceId))
+			msg = msg ..  string.format(" %d:%s", 
+						classId, GetClassName(gender, classId))
+			msg = msg ..  string.format(" [%d:%s]", 
+						allianceId, GetAllianceName(allianceId))
+			msg = msg ..  string.format(" in %d:%s", 
+						locationId, GetLocationName(locationId))
+			d(msg)
+		end
 	end
 end
 

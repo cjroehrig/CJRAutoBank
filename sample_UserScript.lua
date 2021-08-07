@@ -8,45 +8,7 @@ local Err						= CJRAB.Err
 local Dbg						= CJRAB.Dbg
 
 --=============================================================================
--- UserScript  -- this is where all character definitions and actions go
-
-
---=============================================================================
--- CHARACTER DEFINITIONS
-
--- current equipment (cloth/blacksm/wood) crafting rank for all alts
--- NB: they must tier-up in lock-step
-local CURR_ALT_EQUIP_WRIT_RANK	= 2
-local CURR_QUEST_ZONE			= "Glenumbra"
-
--- Use constants instead of strings
-local C_Charlotte		= 1
-local C_Calliope		= 2
-local C_Buffy			= 3
-local C_Gareth			= 4
-local C_Freddy			= 5
-local C_Kevin			= 6
-
--- Enable Auto Banking for that char
-CJRAB.CharsEnabled = {
-	[C_Charlotte]		= true,
-	[C_Calliope]		= true,
-	[C_Buffy]			= true,
-	[C_Gareth]			= true,
-	[C_Freddy]			= true,
-	[C_Kevin]			= true
-}
-
--- for CJRAB.GetString
-CJRAB_SI_CHARNAME = {
-	[0]="UNKNOWN CHAR",
-	"Charlotte",
-	"Calliope",
-	"Buffy",
-	"Gareth",
-	"Freddy",
-	"Kevin",
-}
+-- UserScript  -- this is where all actions go
 
 
 --=============================================================================
@@ -55,16 +17,16 @@ CJRAB_SI_CHARNAME = {
 --  or use /zgoo FCOIS to inspect LAMiconsList to get the index for icons
 --  custom/dynamic icons start at [13]
 
-local ICON_LOWLEVEL			= 13
+local ICON_RESERVED			= 13
 local ICON_WRITMATS			= 14
 
+local is_reserved = function(bag, slot)
+	if not FCOIS then return false end
+	return FCOIS.IsMarked( bag, slot, ICON_RESERVED )
+end
 local is_writ = function(bag, slot)
 	if not FCOIS then return false end
 	return FCOIS.IsMarked( bag, slot, ICON_WRITMATS )
-end
-local is_low = function(bag, slot)
-	if not FCOIS then return false end
-	return FCOIS.IsMarked( bag, slot, ICON_LOWLEVEL )
 end
 
 
@@ -73,13 +35,13 @@ end
 --	t = type  st = specific type
 
 --=====================================
--- ESO ITEM_QUALITY constants are bizarre; these correspond to the SI_..
-local QUALITY_WORN			= 0
-local QUALITY_NORMAL		= 1
-local QUALITY_FINE			= 2
-local QUALITY_SUPERIOR		= 3
-local QUALITY_EPIC			= 4
-local QUALITY_LEGENDARY		= 5
+-- ESO ITEM_QUALITY constants have weird names; use the common ones
+local QUALITY_WORN			= ITEM_QUALITY_TRASH		-- 0
+local QUALITY_NORMAL		= ITEM_QUALITY_NORMAL		-- 1
+local QUALITY_FINE			= ITEM_QUALITY_MAGIC		-- 2
+local QUALITY_SUPERIOR		= ITEM_QUALITY_ARCANE		-- 3
+local QUALITY_EPIC			= ITEM_QUALITY_ARTIFACT		-- 4
+local QUALITY_LEGENDARY		= ITEM_QUALITY_LEGENDARY	-- 5
 
 --=====================================
 local function isEnchant(t)
@@ -152,7 +114,7 @@ local function isEquipWritMat(link, t, quality)
 		t == ITEMTYPE_CLOTHIER_MATERIAL or
 		t == ITEMTYPE_WOODWORKING_MATERIAL then
 		local minRank = GetItemLinkRequiredCraftingSkillRank(link)
-		if minRank == CURR_ALT_EQUIP_WRIT_RANK then
+		if minRank == CJRAB.CURR_ALT_EQUIP_WRIT_RANK then
 			if quality < QUALITY_FINE then
 				return true
 			end
@@ -168,37 +130,29 @@ end
 local HoardReason = ""
 
 --=====================================
-local function isCharStyle(char, bag, slot, link, t, style)
+local function isCharStyleMat(char, bag, slot, link, t, style)
 	-- return true if this is char's style mat
 	if t ~= ITEMTYPE_STYLE_MATERIAL then return false end
-	-- only distribute style mats marked as "low-level"...
-	if not is_low(bag,slot) then return false end
+	-- only distribute style mats marked as reserved...
+	if not is_reserved(bag,slot) then return false end
 
-	-- XXX: can't check style == GetRaceId(char); maybe with LeoAltholic...
-			--[[
-				ITEMSTYLE_RACIAL_BRETON		1
-				ITEMSTYLE_RACIAL_ORC		3
-				ITEMSTYLE_RACIAL_DARK_ELF	4
-				ITEMSTYLE_RACIAL_NORD		5
-				ITEMSTYLE_RACIAL_ARGONIAN	6
-				ITEMSTYLE_RACIAL_HIGH_ELF	7
-				ITEMSTYLE_RACIAL_WOOD_ELF	8
-				ITEMSTYLE_RACIAL_KHAJIIT	9
-				ITEMSTYLE_RACIAL_IMPERIAL	34
-			]]--
-
-	if	   (char == C_Calliope	and style == ITEMSTYLE_RACIAL_REDGUARD)
-		or (char == C_Buffy		and style == ITEMSTYLE_RACIAL_HIGH_ELF)
---		or (char == C_Gareth	and style == ITEMSTYLE_RACIAL_NORD)
-		or (char == C_Freddy	and style == ITEMSTYLE_RACIAL_NORD)
---		or (char == C_Kevin	and style == ITEMSTYLE_RACIAL_REDGUARD)
-		then
+	if char ~= C_MAIN then
+		-- alts get their racial style mats
+		-- XXX: raceId matches ITEMSTYLE_RACIAL_* .. imperial too?
+		local c = CJRAB.Chars[char]
+		if style == c.raceId then
+			local race = GetRaceName(c.gender, style)
+			HoardReason = race .. " style mat for ALT writ use"
 			return true
-	elseif	char == C_Charlotte
-		and	style ~= ITEMSTYLE_RACIAL_REDGUARD
-		and	style ~= ITEMSTYLE_RACIAL_NORD
-		and	style ~= ITEMSTYLE_RACIAL_HIGH_ELF then
-		-- gets all the rest
+		end
+	else
+		-- main get all the rest
+		for i = 1, #CJRAB.Chars do
+			-- skip other char's 
+			local c = CJRAB.Chars[i]
+			if i ~= char and style == c.raceId then return false end
+		end
+		HoardReason = "style mat for MAIN use"
 		return true
 	end
 end
@@ -211,7 +165,6 @@ function CJRAB.LowestCraftLevelChar(ctype)
 	local min_level = 999
 	local min_char = nil
 	local leoId = CJRAB.GetLeoCraftID(ctype)
-	local char, cdata
 
 	for char, cdata in pairs(CJRAB.LeoData) do
 		if cdata then
@@ -261,20 +214,20 @@ local function isForDeconstruction(char, bag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
-		if is_low(bag,slot) then return false end 		-- skip marked gear
-		if isUnresearchedTraitItem(C_Charlotte, link, t) then return false end
+		if is_reserved(bag,slot) then return false end 		-- skip marked gear
+		if isUnresearchedTraitItem(C_MAIN, link, t) then return false end
 
 		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
 			-- don't get rare mats from low-level alts; send to main instead
-			if char == C_Charlotte then
-				HoardReason = HoardReason .. "for mats deconstruction"
+			if char == C_MAIN then
+				HoardReason = "for mats deconstruction"
 				return true
 			end
 		else
 			-- send to char with the lowest skill
 			local craft = GetItemLinkCraftingSkillType(link)
 			if char == CJRAB.LowestCraftLevelChar(craft) then
-				HoardReason = HoardReason .. "for XP deconstruction"
+				HoardReason = "for XP deconstruction"
 				return true
 			end
 		end
@@ -300,7 +253,8 @@ local function isInCharHoard(char, player, bag, slot)
 	-- if true then return false end		-- for debugging
 
 	-- distribute style mats to appropriate chars
-	if isCharStyle(char, bag, slot, link, t, style) then return true end
+	-- XXX: first one that logs in gets them all, doesn't give them up
+	if isCharStyleMat(char, bag, slot, link, t, style) then return true end
 
 	-- items for deconstruction if char has the lowest skill
 	if isForDeconstruction(char, bag, slot, link, t, quality) then
@@ -308,97 +262,129 @@ local function isInCharHoard(char, player, bag, slot)
 	end
 
 	---------------------------------------
-	if char == C_Charlotte then
-		if t == ITEMTYPE_LURE then return true end
-		if isAlchemy(t) and not is_writ(bag,slot)	then return true end
+	if char == C_MAIN then
+		if t == ITEMTYPE_LURE then
+			return true
+		end
+		if isAlchemy(t) and not is_writ(bag,slot)	then
+			HoardReason = "alchemy archive"
+			return true
+		end
 
 		-- must know all recipes
 		if t == ITEMTYPE_RECIPE and not IsItemLinkRecipeKnown(link) then
+			HoardReason = "recipe to learn"
 			return true
 		end
 		-- Furnishings
-		if t == ITEMTYPE_FURNISHING					then return true end
-		if t == ITEMTYPE_FURNISHING_MATERIAL		then return true end
+		if t == ITEMTYPE_FURNISHING or t == ITEMTYPE_FURNISHING_MATERIAL then
+			HoardReason = "MAIN furnishings/crafting"
+			return true
+		end
 		-- Equip Craft mats
-		if	isEquipCraft(t) and
-			not isEquipWritMat(link, t, quality) and
-			quality <= QUALITY_SUPERIOR then return true end
+		if	isEquipCraft(t) and not isEquipWritMat(link, t, quality) and
+						quality <= QUALITY_SUPERIOR then
+			HoardReason = "MAIN crafting"
+			return true
+		end
 
 		-- surveys for the current zone
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
-			if name:find(CURR_QUEST_ZONE) then return true end
+			if name:find(CJRAB.CurrZone) then
+				HoardReason = "Survey for current zone " .. CJRAB.CurrZone
+				return true
+			end
 		end
 
-		-- XXX: take all empties for filling for now
+		-- XXX: take all empty soul gems for filling for now
 		if t == ITEMTYPE_SOUL_GEM and quality == QUALITY_NORMAL then
-									return true end -- empty Soul gems
+			HoardReason = "Empty soul gems for filling"
+			return true
+		end
 
 	---------------------------------------
-	elseif char == C_Calliope then
-		-- quester...
-
-
-	---------------------------------------
-	elseif char == C_Buffy then
-
-		-- future style mats
-		if t == ITEMTYPE_STYLE_MATERIAL and not is_low(bag, slot) then
+	elseif char == C_STYLES then
+		-- archive future style mats
+		if t == ITEMTYPE_STYLE_MATERIAL and not is_reserved(bag, slot) then
+			HoardReason = "style mat archived for future"
 			return true
 		end
 		-- Costumes, etc
-		if t == ITEMTYPE_COSTUME					then return true end
-		if t == ITEMTYPE_DISGUISE					then return true end
-		-- XXX: cosmetic apparel (also st=0):
-		if t == ITEMTYPE_ARMOR and
-			filter == ITEMFILTERTYPE_MISCELLANEOUS	then return true end
-
-	---------------------------------------
-	elseif char == C_Gareth then
-		-- future surveys
-		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
-			if not name:find(CURR_QUEST_ZONE) then return true end
+		if t == ITEMTYPE_COSTUME or t == ITEMTYPE_DISGUISE then
+			HoardReason = "costume/disguse archive"
+			return true
 		end
-
-	---------------------------------------
-	elseif char == C_Freddy then
-		-- trait mats
-		if t == ITEMTYPE_WEAPON_TRAIT 				then return true end
-		if t == ITEMTYPE_ARMOR_TRAIT 				then return true end
-
-		-- Future items
-		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
-		if t == ITEMTYPE_CROWN_ITEM					then return true end
-		if name:find("^Crown") then
-			-- exceptions...
+		-- XXX: cosmetic apparel (also st=0):
+		if t == ITEMTYPE_ARMOR and filter == ITEMFILTERTYPE_MISCELLANEOUS then
+			HoardReason = "cosmetic apparel archive"
 			return true
 		end
 
-		if isEnchant(t) then return quality > QUALITY_SUPERIOR end
-		if isEquipCraft(t) and quality > QUALITY_SUPERIOR then return true end
-		if t == ITEMTYPE_POISON then return quality > QUALITY_FINE end
+	---------------------------------------
+	elseif char == C_SURVEYS then
+		-- future surveys
+		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
+			if not name:find(CJRAB.CurrZone) then
+				HoardReason = "surveys for other zones"
+				return true
+			end
+		end
 
 	---------------------------------------
-	elseif char == C_Kevin then
+	elseif char == C_TRAITS then
+		-- trait mats
+		if t == ITEMTYPE_WEAPON_TRAIT or t == ITEMTYPE_ARMOR_TRAIT then
+			HoardReason = "trait mats for future"
+			return true
+		end
+
+	---------------------------------------
+	elseif char == C_FUTURE then
+		-- Future, crown and rare items
+		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
+		if t == ITEMTYPE_CROWN_ITEM	or name:find("^Crown") then
+			-- exceptions?
+			HoardReason = "Crown items for future"
+			return true
+		end
+
+		if isEnchant(t) and quality > QUALITY_SUPERIOR then
+			HoardReason = "epic enchant mats for future"
+			return true
+		end
+		if isEquipCraft(t) and quality > QUALITY_SUPERIOR then
+			HoardReason = "epic craft mats for future"
+			return true
+		end
+		if t == ITEMTYPE_POISON and quality > QUALITY_FINE then
+			HoardReason = "superior poisons for future"
+			return true
+		end
+
+	---------------------------------------
+	elseif char == C_FOOD then
 		-- Provisioning ingredients not marked as Writ
 		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
-			HoardReason = HoardReason .. "stores unused ingredients"
+			HoardReason = "unused ingredient archive"
 			return true
 		end
 
 		-- low level (previous writ) food
 		if t == ITEMTYPE_FOOD or t == ITEMTYPE_DRINK then
-			if is_low(bag,slot) then
-				HoardReason = HoardReason .. "outleveled food for guild"
+			if is_reserved(bag,slot) then
+				HoardReason = "outleveled food for guild"
 				return true
 			end
 		end
+	---------------------------------------
+	elseif char == C_LOWMATS then
 
 		-- out-leveled Equip crafting mats (manually deposited)
 		if	isEquipCraft(t) then
 			local minRank = GetItemLinkRequiredCraftingSkillRank(link)
-			if minRank < CURR_ALT_EQUIP_WRIT_RANK and
+			if minRank < CJRAB.CURR_ALT_EQUIP_WRIT_RANK and
 					quality < QUALITY_FINE then
-				HoardReason = HoardReason .. "outleveled mats"
+				HoardReason = "outleveled mats"
 				return true
 			end
 		end
@@ -411,7 +397,7 @@ end
 local function isInOtherCharHoard(char, bag, slot)
 	-- Return the charID if the item in bag/slot is in another character's hoard
 	-- (not char's), or nil otherwise.
-	for c, enabled in ipairs(CJRAB.CharsEnabled) do
+	for c = 1, #CJRAB.Chars do
 		if c ~= char then
 			if isInCharHoard(c, char, bag, slot) then return c end
 		end
@@ -432,27 +418,42 @@ local function isInBankHoard(bankBag, bag, slot)
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
-		if isEnchant(t) and quality <= QUALITY_SUPERIOR then return true end
+		if isEnchant(t) and quality <= QUALITY_SUPERIOR then
+			HoardReason = "enchant archive"
+			return true
+		end
 
 		if t== ITEMTYPE_RECIPE and IsItemLinkRecipeKnown(link) then
-									return true end
-		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then return true end
+			HoardReason = "for any takers"
+			return true
+		end
+		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then
+			HoardReason = "for all to use"
+			return true
+		end
 
-		-- Provisioning Writ Mats
-		if isAlchemy(t) and is_writ(bag,slot)	then return true end
-		if t == ITEMTYPE_INGREDIENT and is_writ(bag,slot) then return true end
-		if t == ITEMTYPE_FOOD and is_writ(bag,slot) then return true end
-		if t == ITEMTYPE_DRINK and is_writ(bag,slot) then return true end
-		if t == ITEMTYPE_POTION and is_writ(bag,slot) then return true end
+		-- Alchemy and Provisioning Writ mats...
+		if isAlchemy(t) or t == ITEMTYPE_POTION or
+					t == ITEMTYPE_INGREDIENT or
+					t == ITEMTYPE_FOOD or
+					t == ITEMTYPE_DRINK then
+			if is_writ(bag, slot) then
+				HoardReason = "for Writs"
+				return true
+			end
+		end
 
 		-- Equipment (b/c/w) Writ mats (only for current rank)
-		if isEquipWritMat(link, t, quality) then return true end
+		if isEquipWritMat(link, t, quality) then
+			HoardReason = "for Writs"
+			return true
+		end
 
-		-- Bank all unknown trait Research items for Charlotte
+		-- Bank all unknown trait Research items for MAIN
 		-- (but leave them in the bank)
-		if isUnresearchedTraitItem(C_Charlotte, link, t) and
-					not is_low(bag, slot) then		-- skip marked gear
-			HoardReason = HoardReason .. "for Charlotte to research"
+		if isUnresearchedTraitItem(C_MAIN, link, t) and
+					not is_reserved(bag, slot) then		-- skip marked gear
+			HoardReason = "for " ..  CJRAB.CharName(C_MAIN) .. " to research"
 			return true
 		end
 	end
@@ -466,7 +467,7 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 	-- Deposit all hoardable stuff from backpack into bankBag
 	-- (including anything hoardable by any characters other than char).
 	-- If onlyFillExisting is true, then don't use any new slots in bankBag.
-	local slot, str, count
+	local str, count
 	local bag = BAG_BACKPACK
 
 	for slot in CJRAB.BagItems(bag) do
@@ -505,7 +506,7 @@ end
 
 --=====================================
 local function withdrawHoardables( char, bankBag )
-	local slot, str, count
+	local str, count
 	for slot in CJRAB.BagItems(bankBag) do
 		HoardReason = ""
 		if isInCharHoard(char, char, bankBag, slot) then
@@ -518,15 +519,15 @@ end
 local function transferCurrency(char)
 	local amount, src, dst, msg
 
-	if char == C_Charlotte then
-		-- withdraw all
+	if char == C_MAIN then
+		-- MAIN: withdraw all
 		amount = GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK)
 		src = CURRENCY_LOCATION_BANK
 		dst = CURRENCY_LOCATION_CHARACTER
 		msg = "Withdrawing"
 
 	else
-		-- deposit all but 999G
+		-- ALT: deposit all but 999G
 		amount = GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)
 		amount = amount - 999
 		src = CURRENCY_LOCATION_CHARACTER
@@ -550,7 +551,7 @@ function CJRAB.OpenBanking(bankBag)
 	local charname = GetUnitName("player")
 	local char = CJRAB.GetChar(charname)
 	-- skip if character is not enabled
-	if not char or not CJRAB.CharsEnabled[char] then return false end
+	if not char or not CJRAB.Chars[char].enabled then return false end
 
 	-- XXX: only do our actual bank for now...
 	if bankBag ~= BAG_BANK then return end

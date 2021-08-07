@@ -32,7 +32,6 @@ function CJRAB.SlashCommands()
 			d("FCO Item Saver is not installed")
 			return
 		end
-		local i, name
 		for i, name in ipairs(FCOIS.LAMiconsList) do
 			if name then
 				d(string.format("[%d] %s", i, name))
@@ -46,7 +45,6 @@ function CJRAB.SlashCommands()
 		CJRAB.FetchLeoData()
 		if not name or name == "" then name = GetUnitName("player") end
 		if name == "all" then
-			local char
 			for char, _ in ipairs(CJRAB.CharsEnabled) do
 				name = CJRAB.CharName(char)
 				Msg("dumpcraft %d:%s", char, name)
@@ -57,9 +55,11 @@ function CJRAB.SlashCommands()
 		end
 	end
 
+	SLASH_COMMANDS["/dumpchar"] = function(name) CJRAB.DumpChar(name) end
+	SLASH_COMMANDS["/dumpcharraw"] = function(name) CJRAB.DumpCharRaw(name) end
+
 	SLASH_COMMANDS["/stragglers"] = function(name)
 		CJRAB.FetchLeoData()
-		local craft, craftname
 		for craft, craftname in pairs(CJRAB_SI_CRAFTINGTYPE) do
 			if craft ~=  0 then
 				local char = CJRAB.LowestCraftLevelChar(craft)
