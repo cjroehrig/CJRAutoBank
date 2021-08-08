@@ -10,7 +10,6 @@ local Dbg						= CJRAB.Dbg
 --=============================================================================
 -- UserScript  -- this is where all actions go
 
-
 --=============================================================================
 -- FCOItemSaver Icons
 --  Use /dumpfcoicons to get a list of all icons and their indexes
@@ -126,7 +125,7 @@ end
 --=============================================================================
 -- Hoard helper functions
 
--- A global extra reason for a character transfer
+-- A global reason for a transfer (added to the message)
 local HoardReason = ""
 
 --=====================================
@@ -250,6 +249,7 @@ local function isInCharHoard(char, player, bag, slot)
             GetItemInfo(bag, slot)
 	local filter = GetItemLinkFilterTypeInfo(link)
 	local trait = GetItemLinkTraitInfo(link)
+	local minRank = GetItemLinkRequiredCraftingSkillRank(link)
 	-- if true then return false end		-- for debugging
 
 	-- distribute style mats to appropriate chars
@@ -284,8 +284,10 @@ local function isInCharHoard(char, player, bag, slot)
 		-- Equip Craft mats
 		if	isEquipCraft(t) and not isEquipWritMat(link, t, quality) and
 						quality <= QUALITY_SUPERIOR then
-			HoardReason = "MAIN crafting"
-			return true
+			if minRank >= CJRAB.CURR_ALT_EQUIP_WRIT_RANK then
+				HoardReason = "MAIN crafting"
+				return true
+			end
 		end
 
 		-- surveys for the current zone
@@ -301,9 +303,10 @@ local function isInCharHoard(char, player, bag, slot)
 			HoardReason = "Empty soul gems for filling"
 			return true
 		end
+	end
 
 	---------------------------------------
-	elseif char == C_STYLES then
+	if char == C_STYLES then
 		-- archive future style mats
 		if t == ITEMTYPE_STYLE_MATERIAL and not is_reserved(bag, slot) then
 			HoardReason = "style mat archived for future"
@@ -319,9 +322,10 @@ local function isInCharHoard(char, player, bag, slot)
 			HoardReason = "cosmetic apparel archive"
 			return true
 		end
+	end
 
 	---------------------------------------
-	elseif char == C_SURVEYS then
+	if char == C_SURVEYS then
 		-- future surveys
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
 			if not name:find(CJRAB.CurrZone) then
@@ -329,17 +333,19 @@ local function isInCharHoard(char, player, bag, slot)
 				return true
 			end
 		end
+	end
 
 	---------------------------------------
-	elseif char == C_TRAITS then
+	if char == C_TRAITS then
 		-- trait mats
 		if t == ITEMTYPE_WEAPON_TRAIT or t == ITEMTYPE_ARMOR_TRAIT then
 			HoardReason = "trait mats for future"
 			return true
 		end
+	end
 
 	---------------------------------------
-	elseif char == C_FUTURE then
+	if char == C_FUTURE then
 		-- Future, crown and rare items
 		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
 		if t == ITEMTYPE_CROWN_ITEM	or name:find("^Crown") then
@@ -360,9 +366,10 @@ local function isInCharHoard(char, player, bag, slot)
 			HoardReason = "superior poisons for future"
 			return true
 		end
+	end
 
-	---------------------------------------
-	elseif char == C_FOOD then
+	--------------------------------------
+	if char == C_FOOD then
 		-- Provisioning ingredients not marked as Writ
 		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
 			HoardReason = "unused ingredient archive"
@@ -376,12 +383,13 @@ local function isInCharHoard(char, player, bag, slot)
 				return true
 			end
 		end
+	end
+
 	---------------------------------------
-	elseif char == C_LOWMATS then
+	if char == C_LOWMATS then
 
 		-- out-leveled Equip crafting mats (manually deposited)
 		if	isEquipCraft(t) then
-			local minRank = GetItemLinkRequiredCraftingSkillRank(link)
 			if minRank < CJRAB.CURR_ALT_EQUIP_WRIT_RANK and
 					quality < QUALITY_FINE then
 				HoardReason = "outleveled mats"

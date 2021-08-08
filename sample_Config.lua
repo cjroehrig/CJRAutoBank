@@ -7,6 +7,7 @@ local CJRAB = CJRAB
 --=============================================================================
 -- Config for current state 
 
+
 -- current equipment (cloth/blacksm/wood) crafting rank for all alts
 -- NB: they must tier-up in lock-step
 CJRAB.CURR_ALT_EQUIP_WRIT_RANK	= 2

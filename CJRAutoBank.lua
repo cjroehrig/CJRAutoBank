@@ -272,7 +272,7 @@ end
 -- TRANSFERS (move from one bag to another)
 -- All transfers use a queue to do the actual transfers
 -- which is processed asynchronously by an Update event loop
--- every TransferDelay milliseconds.
+-- every CJRAB.TransferDelay milliseconds.
 -- Because of this, we need to plan the transfers in advance
 -- (which slots fill up, which ones are free, etc) on a
 -- "clone" of the two bags which we update stack sizes on.
@@ -456,16 +456,20 @@ end
 --=====================================
 function CJRAB.ProcessTransfer()
 	-- Process the TransferQueue in an asynchronous update loop.
-	-- Every TransferDelay ms, dequeue the next function and execute it.
+	-- Every CJRAB.TransferDelay ms, dequeue the next function and execute it.
 
 	-- disable Logging during this (extraneous messages)
 	local saved_logging = CJRAB.Logging
 	CJRAB.Logging = false
 	-- re-enable it after a delay (just add to the TxQueue)
+	-- XXX: not enough delay though; get a logged msg at the end
 	table.insert(CJRAB.TransferQueue, function()
 						CJRAB.Logging = saved_logging end)
 
-	EVENT_MANAGER:RegisterForUpdate(CJRAB.AddonName, CJRAB.TransferDelay,
+	local delay = CJRAB.TransferDelay
+	if not delay then delay = 1000 end
+	if delay < 250 then delay = 250 end		-- don't attract ZMax attention
+	EVENT_MANAGER:RegisterForUpdate(CJRAB.AddonName, delay,
 		function()
 			if CJRAB.TransferQueueIndex <= #CJRAB.TransferQueue then
 				local func = CJRAB.TransferQueue[CJRAB.TransferQueueIndex]
