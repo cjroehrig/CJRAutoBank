@@ -594,11 +594,11 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 		tx_count = count
 
 		-- find an empty slot
-		-- dst_slot = FindFirstEmptySlotInBag(dstBag)
 		dst_slot = dbag:FindFirstEmptySlotInBag()
 		if not dst_slot then
-			Msg("No space left on device /dev/%s", CJRAB.BagName(dstBag))
-			return
+			Msg("No space in %s for %s",
+				CJRAB.BagName(dstBag), CJRAB.ItemName(bag, slot))
+			return 0
 		end
 
 		msg = makeTxMessage(bag, slot, dstBag, tx_count, reason)

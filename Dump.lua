@@ -82,13 +82,29 @@ function CJRAB.DumpSlot(bag, slot)
 	if style > 0 then
 		msg = msg .. string.format(" style=%d:%s", style,
 					GetItemStyleName(style))
-		-- if IsSmithingStyleKnown(style,...?
-
+		if IsSmithingStyleKnown(style) then
+			msg = msg .. "[COLLECTED]"
+		end
 	end
 
 	trait = GetItemLinkTraitInfo(link)
 	if trait > 0 then
 		msg = msg .. " trait=" .. dstr('SI_ITEMTRAITTYPE', trait)
+		local CS = CraftStoreFixedAndImprovedLongClassName
+		if CS and C_MAIN then
+			local craft, line, trait = CS.GetTrait(link)
+			if craft then
+				local charname = CJRAB.CharName(C_MAIN)
+				local state= CS.Data.crafting.researched[charname][craft][line][trait]
+				if state == true then
+					msg = msg .. string.format("[KNOWN by %s]", charname)
+				elseif state == false then
+					msg = msg .. string.format("[UNKNOWN by %s]", charname)
+				else
+					msg = msg .. string.format("[%s is RESEARCHING]", charname)
+				end
+			end
+		end
 	end
 
 

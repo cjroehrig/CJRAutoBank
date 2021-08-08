@@ -8,9 +8,18 @@ local CJRAB = CJRAB
 -- Config for current state 
 
 
--- current equipment (cloth/blacksm/wood) crafting rank for all alts
--- NB: they must tier-up in lock-step
-CJRAB.CURR_ALT_EQUIP_WRIT_RANK	= 2
+-- current crafting ranks for all alts
+-- NB: they must rank-up in lock-step for a given craft
+CJRAB.ALTCraftRank = {
+	-- keep these in order
+	[CRAFTING_TYPE_BLACKSMITHING]		= 2,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 2,		-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= 2,		-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 1,		-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= 3,		-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= 3,		-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
+}
 
 -- current questing zone (to keep surveys on MAIN instead of in storage)
 CJRAB.CurrZone = "Glenumbra"
