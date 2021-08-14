@@ -1,4 +1,4 @@
-# CJAutoBank
+# CJRAutoBank
 
 User-scriptable auto-banking for ESO.
 

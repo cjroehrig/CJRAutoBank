@@ -586,7 +586,7 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 	count, max = sbag:GetSlotStackSize(slot)
 
 	-- Fill any existing slot
-	tx_count = CJRAB.TransferFill(bag, slot, dstBag)
+	tx_count = CJRAB.TransferFill(bag, slot, dstBag, reason)
 
 	-- transfer any remainder
 	count = count - tx_count
