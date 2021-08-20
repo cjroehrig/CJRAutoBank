@@ -277,161 +277,6 @@ end
 -- (which slots fill up, which ones are free, etc) on a
 -- "clone" of the two bags which we update stack sizes on.
 
---=========================================================
--- CloneBag object
-local function cloneBag(bag)
-	-- returns a cloneBag of bag that we can operate on
-	-- and change quantities to plan out the transfers
-	local this = {
-		bag = bag;
-		items = {};
-	--=====================================
-	-- more-or-less clone of the relevant bag API...
-	GetBagSize = function(self)
-		return #self.items
-	end;
-	BagName = function(self)
-		return CJRAB.BagName(self.bag)
-	end;
-	GetItemLink = function(self, slot)
-		return self.items[slot+1].link
-	end;
-	HasItemInSlot = function(self, slot)
-		return self.items[slot+1].link ~= false
-	end;
-	GetItemId = function(self, slot)
-		return self.items[slot+1].id
-	end;
-	GetSlotStackSize = function(self, slot)
-		return self.items[slot+1].stack, self.items[slot+1].max
-	end;
-	ItemName = function(self, slot)
-		local link = self:GetItemLink(slot)
-		if link then
-			return zo_strformat(SI_TOOLTIP_ITEM_NAME, link)
-		else
-			return ""
-		end
-	end;
-	FindFirstEmptySlotInBag = function(self)
-		for slot = 0, self:GetBagSize()-1 do
-			if not self:HasItemInSlot(slot) then
-				return slot
-			end
-		end
-		return false
-	end;
-
-	--=====================================
-	Items = function(self)
-		-- return an iterator for all slots containing items in bag
-		local size = #self.items
-		local slot = 0
-		return function()
-			slot = slot + 1
-			while slot <= size do
-				if self:HasItemInSlot(slot) then
-					return slot-1
-				end
-				slot = slot + 1
-			end
-		end
-	end;
-
-	--=====================================
-	AddItem = function(self, slot, sbag, sslot, count)
-		-- Add count items from source bag sbag/sslot to slot
-		local id = sbag:GetItemId(sslot)
-		if self:HasItemInSlot(slot) then
-			-- existing item
-			if self:GetItemId(slot) == id then
-				local stack, max = self:GetSlotStackSize(slot)
-				if stack + count > max then
-					Err("cloneBag:AddItem: %s[%d]: %d + %d would exceed max=%d",
-						self:BagName(), slot,
-						stack, count, max)
-					return 0
-				end
-				self.items[slot+1].stack = stack + count
-				return count
-			else
-				Err("cloneBag:AddItem: %s[%d] contains different item: %s",
-					self:BagName(), slot,
-					self:ItemName(slot))
-				return 0
-			end
-		else
-			-- new slot; copy data from sbag
-			Dbg("cloneBag:AddItem: copying data from %s[%s]: %s",
-				sbag:BagName(), sslot, sbag:ItemName(sslot))
-
-			local stack, max = sbag:GetSlotStackSize(sslot)
-			slot = slot+1 -- cloneBag.items uses offset 1 
-			self.items[slot].link = sbag:GetItemLink(sslot)
-			self.items[slot].id = sbag:GetItemId(sslot)
-			self.items[slot].stack = count
-			self.items[slot].max = max
-			return count
-		end
-	end;
-
-	--=====================================
-	RemoveItem = function(self, slot, count)
-		-- Remove count items from source bag sbag/sslot to slot
-		local stack, max = self:GetSlotStackSize(slot)
-		if count > stack then
-			Err("cloneBag:AddItem: %s[%d]: remove %d exceeds stack %d",
-				self:BagName(), slot, count, stack)
-			return 0
-		end
-		slot = slot+1 -- cloneBag.items uses offset 1 
-		self.items[slot].stack = stack - count
-		if self.items[slot].stack == 0 then
-			-- empty slot
-			self.items[slot].id = false
-			self.items[slot].link = false
-			self.items[slot].max = 0
-		end
-
-		return count
-	end;
-
-	--=====================================
-	Transfer = function(self, slot, dbag, dstSlot, count, msg)
-		-- Transfer the item in slot to the clone bag dbag
-		-- this is essentially the same as do_transfer but operates
-		-- immediately on the clone bags.
-		Dbg( "cloneBag:Transfer %s[%s] --> %s[%s]   %d %s '%s'",
-			self:BagName(), slot,
-			dbag:BagName(), dstSlot,
-			count, self:ItemName(slot),
-			msg
-			)
-
-		dbag:AddItem(dstSlot, self, slot, count)
-		self:RemoveItem(slot, count)
-	end;
-	}
-
-	-- copy the bag contents into our instance
-	for slot = 0, GetBagSize(bag)-1 do
-		if HasItemInSlot(bag, slot) then
-			local stack, max = GetSlotStackSize(bag, slot)
-			this.items[slot+1] = {
-				link = GetItemLink(bag, slot, 1),
-				id = GetItemId(bag, slot),
-				stack = stack,
-				max = max
-			}
-		else
-			this.items[slot+1] = { link = false, id = false, stack =0, max = 0 }
-		end
-	end
-	return this
-end
-
-
-
 --=====================================
 function CJRAB.ResetTransfer()
 	CJRAB.TransferQueue = {}
@@ -444,12 +289,12 @@ function CJRAB.InitTransfer(bankBag)
 	-- for a new transfer
 	CJRAB.ResetTransfer()
 
-	-- set up the working plan cloneBags
+	-- set up the working plan CloneBags
 	for i = 1, BAG_MAX_VALUE do
 		CJRAB.TransferBags[i] = {}
 	end
-	CJRAB.TransferBags[bankBag] = cloneBag(bankBag)
-	CJRAB.TransferBags[BAG_BACKPACK] = cloneBag(BAG_BACKPACK)
+	CJRAB.TransferBags[bankBag] = CJRAB.CloneBag(bankBag)
+	CJRAB.TransferBags[BAG_BACKPACK] = CJRAB.CloneBag(BAG_BACKPACK)
 end
 
 
@@ -486,13 +331,15 @@ end
 --=====================================
 local function do_transfer(bag, slot, dstBag, dstSlot, count, msg)
 	-- Transfer count items from bag/slot to dstBag/dstSlot.
-	-- NB: This is run asychronously.
+	-- NB: This is executed asychronously according to a timer schedule.
 	-- msg is a message to display when the transfer is done
 	local ret, str
 	Dbg( "RequestMoveItem %s[%s] --> %s[%s]   %d %s",
 		CJRAB.BagName(bag), slot,
 		CJRAB.BagName(dstBag), dstSlot,
-		count, CJRAB.ItemName(bag, slot)
+		count, 
+		-- NB: this is the actual item name at the time of transfer:
+		CJRAB.ItemName(bag, slot)		
 		)
 	if not CJRAB.DryRun then
 		ret, str = CallSecureProtected('RequestMoveItem',
@@ -507,32 +354,19 @@ local function do_transfer(bag, slot, dstBag, dstSlot, count, msg)
 	end
 end
 
---=====================================
-local function getExistingSlot(cbag, id)
-	-- Return (slot, avail) for the first existing (non-full) slot in
-	-- in cloneBag cbag containing an item with the given id
-	-- (avail is the available space).
-	for slot = 0, cbag:GetBagSize()-1 do
-		if cbag:GetItemId(slot) == id then
-			local size, max = cbag:GetSlotStackSize(slot)
-			if size < max then
-				return slot, max-size
-			end
-		end
-	end
-	return false
-end
 
 --=====================================
 local function makeTxMessage(bag, slot, dstBag, tx_count, reason)
 	local msg
+	local sbag = CJRAB.TransferBags[bag]
+
 	if dstBag == BAG_BACKPACK then
 		msg = CJRAB.BagName(bag) .. ": withdrew"
 	else -- bag == BAG_BACKPACK
 		msg = CJRAB.BagName(dstBag) .. ": deposited"
 	end
 	if tx_count > 1 then msg = msg .. ' ' .. tx_count end
-	msg = msg .. " " .. CJRAB.ItemName(bag, slot)
+	msg = msg .. " " .. sbag:ItemName(slot)
 	if reason and reason ~= "" then
 		msg = msg .. " " .. reason
 	end
@@ -549,12 +383,9 @@ function CJRAB.TransferFill(bag, slot, dstBag, reason)
 	local sbag = CJRAB.TransferBags[bag]
 	local dbag = CJRAB.TransferBags[dstBag]
 
-	-- count, max = GetSlotStackSize(bag, slot)
 	count, max = sbag:GetSlotStackSize(slot)
 	if count == max then return 0 end	-- full stack, forget it
-	-- id = GetItemId(bag, slot)
-	id = sbag:GetItemId(slot)
-	dst_slot, avail = getExistingSlot(dbag, id)
+	dst_slot, avail = dbag:GetStackableSlot(sbag:GetItem(slot))
 	if dst_slot then
 		if count <= avail then
 			tx_count = count
@@ -563,6 +394,7 @@ function CJRAB.TransferFill(bag, slot, dstBag, reason)
 		end
 		msg = makeTxMessage(bag, slot, dstBag, tx_count, reason)
 
+		-- schedule the actual transfer
 		table.insert(CJRAB.TransferQueue, function()
 				do_transfer(bag, slot, dstBag, dst_slot, tx_count, msg) end)
 		-- do the clone transfer to update quantities
@@ -596,12 +428,12 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 		-- find an empty slot
 		dst_slot = dbag:FindFirstEmptySlotInBag()
 		if not dst_slot then
-			Msg("No space in %s for %s",
-				CJRAB.BagName(dstBag), CJRAB.ItemName(bag, slot))
+			Msg("No space in %s for %s", dbag.BagName(), sbag:ItemName(slot))
 			return 0
 		end
 
 		msg = makeTxMessage(bag, slot, dstBag, tx_count, reason)
+		-- schedule the actual transfer
 		table.insert(CJRAB.TransferQueue, function()
 				do_transfer(bag, slot, dstBag, dst_slot, tx_count, msg) end)
 		-- do the clone transfer to update quantities

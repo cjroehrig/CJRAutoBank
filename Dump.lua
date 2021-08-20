@@ -138,6 +138,12 @@ function CJRAB.DumpSlot(bag, slot)
 	-- if IsItemPlayerLocked(bag, slot) then
 	if locked then msg = msg .. " LOCKED" end
 
+	if IsItemFromCrownCrate(bag, slot) then
+		msg = msg .. " CRATE"
+	end
+	if IsItemFromCrownStore(bag, slot) then
+		msg = msg .. " STORE"
+	end
 
 	-- Defunct; not useful
 --	msg = msg .. " mlvl=" ..  GetItemLinkMaterialLevelDescription(link)

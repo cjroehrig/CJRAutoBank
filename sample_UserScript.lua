@@ -36,13 +36,11 @@ local CS = CraftStoreFixedAndImprovedLongClassName
 local ICON_RESERVED			= 13
 local ICON_WRITMATS			= 14
 
-local is_reserved = function(bag, slot)
-	if not FCOIS then return false end
-	return FCOIS.IsMarked( bag, slot, ICON_RESERVED )
+local is_reserved = function(cbag, slot)
+	return cbag:IsFCOMarked(slot, ICON_RESERVED)
 end
-local is_writ = function(bag, slot)
-	if not FCOIS then return false end
-	return FCOIS.IsMarked( bag, slot, ICON_WRITMATS )
+local is_writ = function(cbag, slot)
+	return cbag:IsFCOMarked(slot, ICON_WRITMATS )
 end
 
 
@@ -188,12 +186,12 @@ end
 local HoardReason = ""
 
 --=====================================
-local function isCharStyleMat(char, bag, slot, link, t, style)
+local function isCharStyleMat(char, cbag, slot, link, t)
 	-- return true if this is char's style mat
 	if t ~= ITEMTYPE_STYLE_MATERIAL then return false end
 	-- only distribute style mats marked as reserved...
-	if not is_reserved(bag,slot) then return false end
-
+	if not is_reserved(cbag,slot) then return false end
+	local _, _, _, _, style = GetItemLinkInfo(link)
 	if char ~= CJRAB.ROLE_CRAFTER then
 		-- alts get their racial style mats
 		-- XXX: raceId matches ITEMSTYLE_RACIAL_* .. imperial too?
@@ -276,11 +274,11 @@ end
 
 
 --=====================================
-local function isForDeconstruction(char, bag, slot, link, t, quality)
+local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
-		if is_reserved(bag,slot) then return false end 		-- skip marked gear
+		if is_reserved(cbag,slot) then return false end 	-- skip marked gear
 		if isUnresearchedTraitItem(C_RESEARCH, link, t) then return false end
 
 		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
@@ -307,32 +305,43 @@ end
 
 
 --=====================================
-local function isInCharHoard(char, player, bag, slot)
-	-- Return true if the item in bag/slot is in char's hoard. 
-	local t, st = GetItemType(bag, slot)
-	local link = GetItemLink(bag, slot)
+local function isInCharHoard(char, player, cbag, slot)
+	-- Return true if the item in cbag/slot is in char's hoard. 
+	-- NB: cbag is a CloneBag object
+	local item = cbag:GetItem(slot)
+	local t, st = item.t, item.st
+	local link = item.link
+	local quality = GetItemLinkQuality(link)
 	local name = GetItemLinkName(link)
-	local icon, stack, sellprice, usable, locked, equiptype, style, quality =
-            GetItemInfo(bag, slot)
 	-- if true then return false end		-- for debugging
 
 	-- distribute style mats to appropriate chars
 	-- XXX: first one that logs in gets them all, doesn't give them up
-	if isCharStyleMat(char, bag, slot, link, t, style) then return true end
+	if isCharStyleMat(char, cbag, slot, link, t) then return true end
 
 	-- items for deconstruction if char has the lowest skill
-	if isForDeconstruction(char, bag, slot, link, t, quality) then
+	if isForDeconstruction(char, cbag, slot, link, t, quality) then
 		return true		
 	end
 
 	---------------------------------------
 	-- ROLES
+	-- https://wiki.esoui.com/API
+	-- https://wiki.esoui.com/Constant_Values#ITEMTYPE_ADDITIVE
+	-- https://wiki.esoui.com/Constant_Values#SPECIALIZED_ITEMTYPE_ADDITIVE
 
 	if char == CJRAB.ROLE_QUESTER then
 		-- surveys for the current zone
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
 			if name:find(CJRAB.CurrZone) then
 				HoardReason = "Survey for current zone " .. CJRAB.CurrZone
+				return true
+			end
+		end
+		-- treasure maps for the current zone
+		if st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
+			if name:find(CJRAB.CurrZone) then
+				HoardReason = "Treasure Map for current zone " .. CJRAB.CurrZone
 				return true
 			end
 		end
@@ -346,7 +355,7 @@ local function isInCharHoard(char, player, bag, slot)
 	end
 
 	if char == CJRAB.ROLE_ALCHEMY then
-		if isAlchemy(t) and not is_writ(bag,slot)	then
+		if isAlchemy(t) and not is_writ(cbag,slot)	then
 			HoardReason = "alchemy hoard"
 			return true
 		end
@@ -354,7 +363,7 @@ local function isInCharHoard(char, player, bag, slot)
 
 	if char == CJRAB.ROLE_RECIPE then
 		if t == ITEMTYPE_RECIPE and not IsItemLinkRecipeKnown(link) then
-			if not is_reserved(bag,slot) then
+			if not is_reserved(cbag,slot) then
 				HoardReason = "provisioning recipe to learn"
 				return true
 			end
@@ -396,7 +405,7 @@ local function isInCharHoard(char, player, bag, slot)
 
 	if char == CJRAB.ROLE_STYLES then
 		-- archive future style mats
-		if t == ITEMTYPE_STYLE_MATERIAL and not is_reserved(bag, slot) then
+		if t == ITEMTYPE_STYLE_MATERIAL and not is_reserved(cbag, slot) then
 			HoardReason = "style mat hoard for future"
 			return true
 		end
@@ -416,9 +425,10 @@ local function isInCharHoard(char, player, bag, slot)
 	end
 
 	if char == CJRAB.ROLE_SURVEYS then
-		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
+		if	st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT or
+			st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
 			if not name:find(CJRAB.CurrZone) then
-				HoardReason = "survey hoard for other zones"
+				HoardReason = "survey/treasure map hoard for other zones"
 				return true
 			end
 		end
@@ -435,8 +445,9 @@ local function isInCharHoard(char, player, bag, slot)
 	if char == CJRAB.ROLE_CROWN then
 		-- Future, crown and rare items
 		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
-		if t == ITEMTYPE_CROWN_ITEM	or name:find("^Crown") then
-			-- exceptions?
+		if (t == ITEMTYPE_CROWN_ITEM or name:find("^Crown")) and
+					-- exceptions...
+					t ~= ITEMTYPE_STYLE_MATERIAL then
 			HoardReason = "Crown items for future"
 			return true
 		end
@@ -460,17 +471,19 @@ local function isInCharHoard(char, player, bag, slot)
 
 	if char == CJRAB.ROLE_INGREDIENTS then
 		-- Provisioning ingredients not marked as Writ
-		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
+		if t == ITEMTYPE_INGREDIENT and not is_writ(cbag,slot) then
 			HoardReason = "unused ingredient hoard"
 			return true
 		end
 	end
 
 	if char == CJRAB.ROLE_RESERVE then
-		-- reserved food (e.g. previous writ food for guild)
-		if t == ITEMTYPE_FOOD or t == ITEMTYPE_DRINK then
-			if is_reserved(bag,slot) then
-				HoardReason = "reserved food"
+		-- reserved food/potions (e.g. previous writ food for guild)
+		if		t == ITEMTYPE_FOOD or
+				t == ITEMTYPE_DRINK or
+				t == ITEMTYPE_POTION then
+			if is_reserved(cbag,slot) then
+				HoardReason = "reserved food/potions"
 				return true
 			end
 		end
@@ -489,12 +502,12 @@ end
 
 
 --=====================================
-local function isInOtherCharHoard(char, bag, slot)
-	-- Return the charID if the item in bag/slot is in another character's hoard
+local function isInOtherCharHoard(char, cbag, slot)
+	-- Return the charID if the item in cbag/slot is in another character's hoard
 	-- (not char's), or nil otherwise.
 	for c = 1, #CJRAB.Chars do
 		if c ~= char then
-			if isInCharHoard(c, char, bag, slot) then return c end
+			if isInCharHoard(c, char, cbag, slot) then return c end
 		end
 	end
 	return nil
@@ -502,14 +515,15 @@ end
 
 
 --=====================================
-local function isInBankHoard(bankBag, bag, slot)
-	-- Return true if the item in bag/slot the bankBag hoard.
+local function isInBankHoard(bankBag, cbag, slot)
+	-- Return true if the item in cbag/slot is in the bankBag hoard.
+	-- cbag is a CloneBag; bankBag is a standard bag ID (index)
 	-- NB: isInCharHoard takes precedence
 	-- if true then return false end		-- for debugging
-	local t, st = GetItemType(bag, slot)
-	local link = GetItemLink(bag, slot)
-	local icon, stack, sellprice, usable, locked, equiptype, style, quality =
-            GetItemInfo(bag, slot)
+	local item = cbag:GetItem(slot)
+	local t, st = item.t, item.st
+	local link = item.link
+	local quality = GetItemLinkQuality(link)
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
@@ -540,11 +554,12 @@ local function isInBankHoard(bankBag, bag, slot)
 		end
 
 		-- Alchemy and Provisioning Writ mats (manually marked)
-		if isAlchemy(t) or t == ITEMTYPE_POTION or
+		if isAlchemy(t) or
+					t == ITEMTYPE_POTION or
 					t == ITEMTYPE_INGREDIENT or
 					t == ITEMTYPE_FOOD or
 					t == ITEMTYPE_DRINK then
-			if is_writ(bag, slot) then
+			if is_writ(cbag, slot) then
 				HoardReason = "for writs"
 				return true
 			end
@@ -554,7 +569,7 @@ local function isInBankHoard(bankBag, bag, slot)
 		-- Bank all unknown trait Research items for RESEARCHER
 		-- (but leave them in the bank)
 		if isUnresearchedTraitItem(C_RESEARCH, link, t) and
-					not is_reserved(bag, slot) then		-- skip marked gear
+					not is_reserved(cbag, slot) then	-- skip marked gear
 			HoardReason = "for " ..  CJRAB.CharName(C_RESEARCH) .. " to research"
 			return true
 		end
@@ -570,25 +585,26 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 	-- (including anything hoardable by any characters other than char).
 	-- If onlyFillExisting is true, then don't use any new slots in bankBag.
 	local str, count
-	local bag = BAG_BACKPACK
+	local cbag = CJRAB.TransferBags[BAG_BACKPACK]
 
-	for slot in CJRAB.BagItems(bag) do
-		local link = GetItemLink(bag, slot, 1)
+	for slot in cbag:Items() do
+		local item = cbag:GetItem(slot)
+--		Dbg("depositHoardables: [%d] = %s", slot, cbag:ItemName(slot))
 		HoardReason = ""
 
-		if 		not CJRAB.IsCharBound(bag, slot) and 
-				not IsItemStolen(bag, slot) and
-		   		not IsItemJunk(bag, slot) and
-		   		not IsItemLinkUnique(link) and
-				not isInCharHoard(char, char, bag, slot) then
+		if 		not item.isCharBound and 
+				not item.isStolen and
+		   		not item.isJunk and
+		   		not item.isUnique and
+				not isInCharHoard(char, char, cbag, slot) then
 
 			-- first check if it is in another char's hoard
 			local reason = nil
 			HoardReason = ""
-			local c = isInOtherCharHoard(char, bag, slot)
+			local c = isInOtherCharHoard(char, cbag, slot)
 			if c then
 				reason = "for " .. CJRAB.CharName(c)
-			elseif isInBankHoard(bankBag, bag, slot) then
+			elseif isInBankHoard(bankBag, cbag, slot) then
 				-- otherwise if it is in the bank's hoard
 				reason = "for " .. CJRAB.BagName(bankBag)
 			end
@@ -598,9 +614,9 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 					reason = reason .. ", " .. HoardReason
 				end
 				if onlyFillExisting then
-					CJRAB.TransferFill(bag, slot, bankBag, reason)
+					CJRAB.TransferFill(BAG_BACKPACK, slot, bankBag, reason)
 				else
-					CJRAB.Transfer(bag, slot, bankBag, reason)
+					CJRAB.Transfer(BAG_BACKPACK, slot, bankBag, reason)
 				end
 			end
 		end
@@ -610,9 +626,10 @@ end
 --=====================================
 local function withdrawHoardables( char, bankBag )
 	local str, count
-	for slot in CJRAB.BagItems(bankBag) do
+	local bbag = CJRAB.TransferBags[bankBag]
+	for slot in bbag:Items() do
 		HoardReason = ""
-		if isInCharHoard(char, char, bankBag, slot) then
+		if isInCharHoard(char, char, bbag, slot) then
 			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
 		end
 	end
@@ -677,7 +694,9 @@ function CJRAB.OpenBanking(bankBag)
 	-- StackBag(bankBag)
 	-- StackBag(BAG_BACKPACK)
 
+	-- Initialize all the CloneBags
 	CJRAB.InitTransfer(bankBag)		-- NB: discards any pending transfers
+
 	-- Step 1:  Deposit all bankables to existing stacks to clear backpack
 	depositHoardables(char, bankBag, true)
 
@@ -696,18 +715,20 @@ end
 
 --=====================================
 function CJRAB.CloseBanking(bankBag)
+	-- XXX: Free up the CloneBags
+
 	Msg("See you next time.")
 end
 
 --=====================================
 function CJRAB.Inventory(bag, slot, reason)
 	-- inventory bag/slot has changed
+	-- NB: operate directly on bag slots, not on CloneBags
 	local charname = GetUnitName("player")
 	local char = CJRAB.GetChar(charname)
 	local t, st = GetItemType(bag, slot)
 	local link = GetItemLink(bag, slot)
-	local icon, stack, sellprice, usable, locked, equiptype, style, quality =
-            GetItemInfo(bag, slot)
+	local quality = GetItemLinkQuality(link)
 	local trait = GetItemLinkTraitInfo(link)
 	local isJunk = false
 
@@ -729,7 +750,7 @@ function CJRAB.Inventory(bag, slot, reason)
 	-- jewelery (don't have Summerset)
 	if isJewelryMat(link, t) then isJunk = true end
 
-	if CJRAB.JUNK_UNUSED_INGREDIENTS then
+	if CJRAB.JunkUnusedIngredients then
 		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
 			if quality < QUALITY_FINE then
 				isJunk=true

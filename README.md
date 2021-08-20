@@ -15,5 +15,5 @@ User-scriptable auto-banking for ESO.
 		GENERAL SETTINGS
 			Save settings		Account Wide
 		ICONS > DYNAMIC ICONS > DYNAMIC ICONS
-			1ST DYNAMIC:	"reserved"		Icon:150 (ping coins)
+			1ST DYNAMIC:	"reserved"		Icon:150 (pink coins)
 			2ND DYNAMIC:	"Writ Mats"		Icon:128 (green triangle)

@@ -14,19 +14,19 @@ CJRAB.ALTCraftRank = {
 	-- keep these in order
 	[CRAFTING_TYPE_BLACKSMITHING]		= 3,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 3,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 2,		-- 3
+	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 2,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 3,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 3,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
 }
 
--- current questing zone (to keep surveys on MAIN instead of in storage)
+-- current questing zone (for surveys)
 CJRAB.CurrZone = "Glenumbra"
 
 -- Set to true to mark any unused (non-writ) ingredients as junk
 -- instead of sending to ROLE_INGREDIENT hoard
-CJRAB.JUNK_UNUSED_INGREDIENTS = false
+CJRAB.JunkUnusedIngredients = false
 
 --=============================================================================
 -- CHARACTER DEFINITIONS
@@ -56,24 +56,23 @@ CJRAB.CharsEnabled = {
 local C_MAIN			= C_Charlotte	-- main char (all others are alts)
 
 
-CJRAB.ROLE_QUESTER		= C_MAIN		-- surveys/treasure maps for current zone
-CJRAB.ROLE_CRAFTER		= C_MAIN		-- crafting mats, most racial style mats,
-CJRAB.ROLE_RESEARCH		= C_MAIN		-- items for unlearned crafting research
+CJRAB.ROLE_QUESTER		= C_MAIN		-- surveys/treasure maps for CurrZone
+CJRAB.ROLE_CRAFTER		= C_MAIN		-- crafting mats, some style mats
+CJRAB.ROLE_RESEARCH		= C_MAIN		-- who is doing crafting research
 CJRAB.ROLE_MONEY		= C_MAIN		-- hoards (most of) the money
 CJRAB.ROLE_LURE			= C_MAIN		-- fishing lures
 CJRAB.ROLE_ALCHEMY		= C_MAIN		-- alchemy hoard
 CJRAB.ROLE_RECIPE		= C_MAIN		-- learns all unknown recipes
-CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishing hoard
+CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
 
-
+CJRAB.ROLE_RESERVE		= C_Calliope	-- reserved foods and items
 CJRAB.ROLE_STYLES		= C_Buffy		-- style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
-CJRAB.ROLE_SURVEYS		= C_Gareth		-- zone surveys for non-current zones
+CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
 CJRAB.ROLE_TRAITS		= C_Freddy		-- trait mats
 CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
 CJRAB.ROLE_INGREDIENTS	= C_Kelvin		-- unused food/drink ingredients hoard
-CJRAB.ROLE_RESERVE		= C_Kelvin		-- reserved foods and items
 CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled mats
 
