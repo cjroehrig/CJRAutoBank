@@ -28,6 +28,11 @@ CJRAB.CurrZone = "Glenumbra"
 -- instead of sending to ROLE_INGREDIENT hoard
 CJRAB.JunkUnusedIngredients = false
 
+-- Set to true to keep racial writ style mats in the bank.
+-- Otherwise they are distributed to alts according to race.
+-- (Only applies to style mats marked as writs).
+CJRAB.WritStyleMatsInBank = true
+
 --=============================================================================
 -- CHARACTER DEFINITIONS
 
@@ -49,6 +54,20 @@ CJRAB.CharsEnabled = {
 	[C_Freddy]			= true,
 	[C_Kelvin]			= true
 }
+--=============================================================================
+-- FCO ItemSaver Dynamic Icons
+
+--  Use /dumpfcoicons to get a list of all icons and their indexes
+--  or use /zgoo FCOIS to inspect LAMiconsList to get the index for icons
+--  custom/dynamic icons start at [13]
+
+-- These Dynamic icons are required:
+CJRAB.FCO_ICON_RESERVED			= 13
+CJRAB.FCO_ICON_WRITMATS			= 14
+
+CJRAB.FCO_ICON_MIN				= 13
+CJRAB.FCO_ICON_MAX				= 14
+
 
 --=============================================================================
 -- ROLE DEFINITIONS
@@ -66,7 +85,7 @@ CJRAB.ROLE_RECIPE		= C_MAIN		-- learns all unknown recipes
 CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
 
-CJRAB.ROLE_RESERVE		= C_Calliope	-- reserved foods and items
+CJRAB.ROLE_ARCHIVE		= C_Calliope	-- Archived items (marked with reserve)
 CJRAB.ROLE_STYLES		= C_Buffy		-- style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
 CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
@@ -75,4 +94,3 @@ CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
 CJRAB.ROLE_INGREDIENTS	= C_Kelvin		-- unused food/drink ingredients hoard
 CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled mats
-

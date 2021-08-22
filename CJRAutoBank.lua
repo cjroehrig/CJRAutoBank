@@ -428,7 +428,7 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 		-- find an empty slot
 		dst_slot = dbag:FindFirstEmptySlotInBag()
 		if not dst_slot then
-			Msg("No space in %s for %s", dbag.BagName(), sbag:ItemName(slot))
+			Msg("No space in %s for %s", dbag:BagName(), sbag:ItemName(slot))
 			return 0
 		end
 

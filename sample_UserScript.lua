@@ -10,16 +10,27 @@ local Dbg						= CJRAB.Dbg
 local C_RESEARCH				= CJRAB.ROLE_RESEARCH
 
 --=============================================================================
--- UserScript  -- this is where all actions go
+-- Globals
+local PlayerChar				-- valid between OpenBanking/CloseBanking
+--=============================================================================
+-- Extra ESO Constants
 
 --=====================================
 -- ESO ITEM_QUALITY constants have weird names; use the current ones
-local QUALITY_WORN			= ITEM_QUALITY_TRASH		-- 0
-local QUALITY_NORMAL		= ITEM_QUALITY_NORMAL		-- 1
-local QUALITY_FINE			= ITEM_QUALITY_MAGIC		-- 2
-local QUALITY_SUPERIOR		= ITEM_QUALITY_ARCANE		-- 3
-local QUALITY_EPIC			= ITEM_QUALITY_ARTIFACT		-- 4
-local QUALITY_LEGENDARY		= ITEM_QUALITY_LEGENDARY	-- 5
+local QUALITY_WORN					= ITEM_QUALITY_TRASH		-- 0
+local QUALITY_NORMAL				= ITEM_QUALITY_NORMAL		-- 1
+local QUALITY_FINE					= ITEM_QUALITY_MAGIC		-- 2
+local QUALITY_SUPERIOR				= ITEM_QUALITY_ARCANE		-- 3
+local QUALITY_EPIC					= ITEM_QUALITY_ARTIFACT		-- 4
+local QUALITY_LEGENDARY				= ITEM_QUALITY_LEGENDARY	-- 5
+
+
+--=====================================
+-- Special-case ItemIds:
+local ITEMID_MALACHITE_SHARD				= 0xfcb2
+-- Nope, bound to character evidently
+-- local ITEMID_REWARD_WORTHY					= 0x238a9
+local ITEMTYPE_CROWN_POISON					= 0x1374a
 
 --=============================================================================
 -- Other AddOn interfaces
@@ -27,20 +38,11 @@ local QUALITY_LEGENDARY		= ITEM_QUALITY_LEGENDARY	-- 5
 --=====================================
 local CS = CraftStoreFixedAndImprovedLongClassName
 
---=====================================
--- FCOItemSaver Icons
---  Use /dumpfcoicons to get a list of all icons and their indexes
---  or use /zgoo FCOIS to inspect LAMiconsList to get the index for icons
---  custom/dynamic icons start at [13]
-
-local ICON_RESERVED			= 13
-local ICON_WRITMATS			= 14
-
 local is_reserved = function(cbag, slot)
-	return cbag:IsFCOMarked(slot, ICON_RESERVED)
+	return cbag:IsFCOMarked(slot, CJRAB.FCO_ICON_RESERVED)
 end
 local is_writ = function(cbag, slot)
-	return cbag:IsFCOMarked(slot, ICON_WRITMATS )
+	return cbag:IsFCOMarked(slot, CJRAB.FCO_ICON_WRITMATS )
 end
 
 
@@ -106,6 +108,25 @@ local function isCosmetic(link, t)
 		return true
 	end
 end
+
+--=====================================
+local function isArchiveType(link, t)
+	-- Return True if this is a Archive type item where 
+	-- the RESERVED mark means to archive it.
+	if t == ITEMTYPE_FOOD then return true end
+	if t == ITEMTYPE_DRINK then return true end
+	if t == ITEMTYPE_POTION then return true end
+	return false
+end
+--=====================================
+local function isStyleMat(link, t)
+	-- Return True if this is a Style mat
+	if t == ITEMTYPE_STYLE_MATERIAL then return true end
+	local id = GetItemLinkItemId(link)
+	if id == ITEMID_MALACHITE_SHARD then return true end
+	return false
+end
+
 
 
 --=====================================
@@ -188,9 +209,14 @@ local HoardReason = ""
 --=====================================
 local function isCharStyleMat(char, cbag, slot, link, t)
 	-- return true if this is char's style mat
-	if t ~= ITEMTYPE_STYLE_MATERIAL then return false end
-	-- only distribute style mats marked as reserved...
-	if not is_reserved(cbag,slot) then return false end
+	if not isStyleMat(link, t) then return false end
+
+	-- only distribute style mats marked as writ...
+	if not is_writ(cbag,slot) then return false end
+
+	-- Keep all reserved style mats in the bank
+	if CJRAB.WritStyleMatsInBank then return false end
+
 	local _, _, _, _, style = GetItemLinkInfo(link)
 	if char ~= CJRAB.ROLE_CRAFTER then
 		-- alts get their racial style mats
@@ -223,15 +249,29 @@ function CJRAB.LowestCraftLevelChar(ctype)
 	local leoId = CJRAB.GetLeoCraftID(ctype)
 
 	for char, cdata in pairs(CJRAB.LeoData) do
-		if cdata then
-			local craft = cdata.skills.craft[leoId]
-			if craft then
-				if craft.rank <= min_level then
-					-- XXX: <= takes the last char of that level
-					min_char = char
-					min_level = craft.rank
+		local rank = 999
+
+		if char == PlayerChar then
+			-- Don't use Leo; it doesn't update if player levels up.
+			-- XXX; code taken from Leo; undocumented API?  No:
+			-- https://forums.elderscrollsonline.com/en/discussion/358626/update-15-api-patch-notes-change-log-pts
+			local skillType, skillIdx = GetCraftingSkillLineIndices(ctype)
+			_, rank = GetSkillLineInfo(skillType, skillIdx)
+--			Dbg("%s has %s rank %d", CJRAB.CharName(char), CJRAB.GetString('CJRAB_SI_CRAFTINGTYPE', ctype), rank)
+
+		else
+			-- not PlayerChar; use Leo
+			if cdata then
+				local craft = cdata.skills.craft[leoId]
+				if craft then
+					rank = craft.rank
 				end
 			end
+		end
+		if rank <= min_level then
+			-- XXX: <= takes the last char of that level
+			min_char = char
+			min_level = rank
 		end
 	end
 --	Dbg("%s has lowest %s crafting (%d)", CJRAB.CharName(min_char),
@@ -278,7 +318,6 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
-		if is_reserved(cbag,slot) then return false end 	-- skip marked gear
 		if isUnresearchedTraitItem(C_RESEARCH, link, t) then return false end
 
 		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
@@ -315,6 +354,11 @@ local function isInCharHoard(char, player, cbag, slot)
 	local name = GetItemLinkName(link)
 	-- if true then return false end		-- for debugging
 
+	-- skip all reserved items unless they are ArchiveType
+	if not isArchiveType(link, t, st) and is_reserved(cbag, slot) then
+		return false
+	end
+
 	-- distribute style mats to appropriate chars
 	-- XXX: first one that logs in gets them all, doesn't give them up
 	if isCharStyleMat(char, cbag, slot, link, t) then return true end
@@ -345,6 +389,12 @@ local function isInCharHoard(char, player, cbag, slot)
 				return true
 			end
 		end
+		-- Crown poisons (for those Endeavors)
+		if t == ITEMTYPE_POISON and 
+					GetItemLinkItemId(link) == ITEMTYPE_CROWN_POISON then
+			HoardReason = "for poison endeavours"
+			return true
+		end
 	end
 
 	if char == CJRAB.ROLE_LURE then
@@ -363,10 +413,8 @@ local function isInCharHoard(char, player, cbag, slot)
 
 	if char == CJRAB.ROLE_RECIPE then
 		if t == ITEMTYPE_RECIPE and not IsItemLinkRecipeKnown(link) then
-			if not is_reserved(cbag,slot) then
-				HoardReason = "provisioning recipe to learn"
-				return true
-			end
+			HoardReason = "provisioning recipe to learn"
+			return true
 		end
 	end
 
@@ -404,8 +452,8 @@ local function isInCharHoard(char, player, cbag, slot)
 	end
 
 	if char == CJRAB.ROLE_STYLES then
-		-- archive future style mats
-		if t == ITEMTYPE_STYLE_MATERIAL and not is_reserved(cbag, slot) then
+		-- archive future non-writ style mats
+		if isStyleMat(link, t) and not is_writ(cbag, slot) then
 			HoardReason = "style mat hoard for future"
 			return true
 		end
@@ -447,6 +495,7 @@ local function isInCharHoard(char, player, cbag, slot)
 		--if t == ITEMTYPE_CROWN_REPAIR				then return true end
 		if (t == ITEMTYPE_CROWN_ITEM or name:find("^Crown")) and
 					-- exceptions...
+					t ~= ITEMTYPE_POISON and
 					t ~= ITEMTYPE_STYLE_MATERIAL then
 			HoardReason = "Crown items for future"
 			return true
@@ -463,10 +512,12 @@ local function isInCharHoard(char, player, cbag, slot)
 			HoardReason = "epic craft mats for future"
 			return true
 		end
+		--[[  No; Poisons are useless
 		if t == ITEMTYPE_POISON and quality > QUALITY_FINE then
 			HoardReason = "superior poisons for future"
 			return true
 		end
+		]]--
 	end
 
 	if char == CJRAB.ROLE_INGREDIENTS then
@@ -477,15 +528,10 @@ local function isInCharHoard(char, player, cbag, slot)
 		end
 	end
 
-	if char == CJRAB.ROLE_RESERVE then
-		-- reserved food/potions (e.g. previous writ food for guild)
-		if		t == ITEMTYPE_FOOD or
-				t == ITEMTYPE_DRINK or
-				t == ITEMTYPE_POTION then
-			if is_reserved(cbag,slot) then
-				HoardReason = "reserved food/potions"
-				return true
-			end
+	if char == CJRAB.ROLE_ARCHIVE then
+		if isArchiveType(link, t, st) and is_reserved(cbag,slot) then
+			HoardReason = "to archive hoard"
+			return true
 		end
 	end
 
@@ -524,6 +570,12 @@ local function isInBankHoard(bankBag, cbag, slot)
 	local t, st = item.t, item.st
 	local link = item.link
 	local quality = GetItemLinkQuality(link)
+
+	-- skip all reserved items unless they are ArchiveType
+	if not isArchiveType(link, t, st) and is_reserved(cbag, slot) then
+		return false
+	end
+
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
@@ -539,6 +591,12 @@ local function isInBankHoard(bankBag, cbag, slot)
 
 		if t == ITEMTYPE_RACIAL_STYLE_MOTIF then
 			HoardReason = "for any takers"
+			return true
+		end
+
+		if isStyleMat(link, t) and CJRAB.WritStyleMatsInBank and
+						is_writ(cbag,slot) then
+			HoardReason = "writ style mat for any takers"
 			return true
 		end
 
@@ -565,11 +623,9 @@ local function isInBankHoard(bankBag, cbag, slot)
 			end
 		end
 
-
 		-- Bank all unknown trait Research items for RESEARCHER
 		-- (but leave them in the bank)
-		if isUnresearchedTraitItem(C_RESEARCH, link, t) and
-					not is_reserved(cbag, slot) then	-- skip marked gear
+		if isUnresearchedTraitItem(C_RESEARCH, link, t) then
 			HoardReason = "for " ..  CJRAB.CharName(C_RESEARCH) .. " to research"
 			return true
 		end
@@ -672,6 +728,7 @@ function CJRAB.OpenBanking(bankBag)
 	local char = CJRAB.GetChar(charname)
 	-- skip if character is not enabled
 	if not char or not CJRAB.Chars[char].enabled then return false end
+	PlayerChar = char		-- set global var
 
 	-- XXX: only do our actual bank for now...
 	if bankBag ~= BAG_BANK then return end
@@ -738,7 +795,7 @@ function CJRAB.Inventory(bag, slot, reason)
 	if quality == ITEM_QUALITY_TRASH and (
 				-- XXX: explicitly list each type here...
 				t == ITEMTYPE_FOOD or t == ITEMTYPE_DRINK ) then
-		isJunk=true
+		isJunk = true
 	end
 	-- XXX: be careful here, some good rewards are Ornate...
 	if quality < QUALITY_FINE then
@@ -753,9 +810,15 @@ function CJRAB.Inventory(bag, slot, reason)
 	if CJRAB.JunkUnusedIngredients then
 		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
 			if quality < QUALITY_FINE then
-				isJunk=true
+				isJunk = true
 			end
 		end
+	end
+
+	-- all poisons except Crown
+	if t == ITEMTYPE_POISON and 
+					GetItemLinkItemId(link) ~= ITEMTYPE_CROWN_POISON then
+		isJunk = true
 	end
 
 

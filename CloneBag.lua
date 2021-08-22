@@ -79,7 +79,8 @@ function CJRAB.CloneBagItem(bag, slot)
 		-- Add FCOItemSaver icon info
 		if FCOIS then
 			this.isFCOMarked = {}
-			for i, name in ipairs(FCOIS.LAMiconsList) do
+--			for i, name in ipairs(FCOIS.LAMiconsList) do
+			for i = CJRAB.FCO_ICON_MIN, CJRAB.FCO_ICON_MAX do
 				local marked  = FCOIS.IsMarked(bag, slot, i)
 --				Dbg("CloneBag: FCOMarked: %d:%s = %s",
 --									i, name, tostring(marked))
