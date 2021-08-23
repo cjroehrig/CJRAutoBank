@@ -1,9 +1,9 @@
 ## Title: CJRAutoBank
 ## Author: croehrig
 ## Description: User-scriptable auto-banking
-## Version: 1.0
+## Version: 1.1
 ## AddOnVersion: 1
-## APIVersion: 100035
+## APIVersion: 100035 101031
 ## DependsOn: 
 
 Config.lua

@@ -86,11 +86,11 @@ CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
 
 CJRAB.ROLE_ARCHIVE		= C_Calliope	-- Archived items (marked with reserve)
-CJRAB.ROLE_STYLES		= C_Buffy		-- style mats
+CJRAB.ROLE_STYLES		= C_Buffy		-- (non-writ) style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
 CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
 CJRAB.ROLE_TRAITS		= C_Freddy		-- trait mats
 CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
 CJRAB.ROLE_INGREDIENTS	= C_Kelvin		-- unused food/drink ingredients hoard
-CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled mats
+CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled crafting mats
