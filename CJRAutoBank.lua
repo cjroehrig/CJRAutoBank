@@ -6,11 +6,6 @@ local CJRAB = CJRAB
 -- Globals
 CJRAB.AddonName = 'CJRAutoBank'
 
--- these can be toggled via slashcommands
-CJRAB.Logging		= true			-- log all inventory in/out
-CJRAB.Debug			= false			-- log debug messages
-CJRAB.DryRun		= false			-- don't do any transfers
-
 -- TransferQueue
 CJRAB.TransferQueue = {}
 CJRAB.TransferBags = {}

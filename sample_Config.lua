@@ -4,6 +4,12 @@ local CJRAB = CJRAB
 
 -- NB: this is loaded first, so no references to anything else!
 
+-- these can be toggled via slashcommands (see SlashCommands.lua)
+CJRAB.DryRun		= true			-- don't do any transfers; just show them
+CJRAB.Logging		= true			-- log all inventory in/out
+CJRAB.Debug			= false			-- log debug messages
+
+
 --=============================================================================
 -- Config for current state 
 
