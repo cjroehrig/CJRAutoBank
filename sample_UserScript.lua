@@ -318,6 +318,7 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
+
 		if isUnresearchedTraitItem(C_RESEARCH, link, t) then return false end
 
 		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
@@ -327,10 +328,15 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 				return true
 			end
 		else
-			-- send to char with the lowest skill
 			local craft = GetItemLinkCraftingSkillType(link)
-			if char == CJRAB.LowestCraftLevelChar(craft) then
-				HoardReason = "for XP deconstruction"
+			if CJRAB.ALTCraftDistribute[craft] then
+				-- send to char with the lowest skill
+				if char == CJRAB.LowestCraftLevelChar(craft) then
+					HoardReason = "for ALT XP deconstruction"
+					return true
+				end
+			elseif char == CJRAB.ROLE_CRAFTER then
+				HoardReason = "for CRAFTER XP deconstruction"
 				return true
 			end
 		end

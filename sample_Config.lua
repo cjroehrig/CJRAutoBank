@@ -7,11 +7,9 @@ local CJRAB = CJRAB
 --=============================================================================
 -- Config for current state 
 
-
 -- current crafting ranks for all alts
 -- NB: they must rank-up in lock-step for a given craft
 CJRAB.ALTCraftRank = {
-	-- keep these in order
 	[CRAFTING_TYPE_BLACKSMITHING]		= 3,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 3,		-- 2
 	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
@@ -20,6 +18,21 @@ CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_WOODWORKING]			= 3,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
 }
+
+-- Crafting mat distribution
+-- If true, distribute low quality (< green) craft mats to the
+-- lowest-ranked ALT; otherwise always send them to ROLE_CRAFTER.
+-- (unresearched items always go to ROLE_RESEARCH).
+CJRAB.ALTCraftDistribute = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= false,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= true,			-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= true,			-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= true,			-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= true,			-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= true,			-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= false,		-- 7
+}
+
 
 -- current questing zone (for surveys)
 CJRAB.CurrZone = "Glenumbra"
