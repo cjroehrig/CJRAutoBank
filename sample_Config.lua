@@ -9,49 +9,6 @@ CJRAB.DryRun		= true			-- don't do any transfers; just show them
 CJRAB.Logging		= true			-- log all inventory in/out
 CJRAB.Debug			= false			-- log debug messages
 
-
---=============================================================================
--- Config for current state 
-
--- current crafting ranks for all alts
--- NB: they must rank-up in lock-step for a given craft
-CJRAB.ALTCraftRank = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= 3,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= 3,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= 2,		-- 4
-	[CRAFTING_TYPE_PROVISIONING]		= 3,		-- 5
-	[CRAFTING_TYPE_WOODWORKING]			= 3,		-- 6
-	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
-}
-
--- Crafting mat distribution
--- If true, distribute low quality (< green) craft mats to the
--- lowest-ranked ALT; otherwise always send them to ROLE_CRAFTER.
--- (unresearched items always go to ROLE_RESEARCH).
-CJRAB.ALTCraftDistribute = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= false,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= true,			-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= true,			-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= true,			-- 4
-	[CRAFTING_TYPE_PROVISIONING]		= true,			-- 5
-	[CRAFTING_TYPE_WOODWORKING]			= true,			-- 6
-	[CRAFTING_TYPE_JEWELRYCRAFTING]		= false,		-- 7
-}
-
-
--- current questing zone (for surveys)
-CJRAB.CurrZone = "Glenumbra"
-
--- Set to true to mark any unused (non-writ) ingredients as junk
--- instead of sending to ROLE_INGREDIENT hoard
-CJRAB.JunkUnusedIngredients = false
-
--- Set to true to keep racial writ style mats in the bank.
--- Otherwise they are distributed to alts according to race.
--- (Only applies to style mats marked as writs).
-CJRAB.WritStyleMatsInBank = true
-
 --=============================================================================
 -- CHARACTER DEFINITIONS
 
@@ -73,6 +30,58 @@ CJRAB.CharsEnabled = {
 	[C_Freddy]			= true,
 	[C_Kelvin]			= true
 }
+
+--=============================================================================
+-- Config for current state 
+
+-- current crafting ranks for all alts
+-- NB: they must rank-up in lock-step for a given craft
+CJRAB.ALTCraftRank = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= 3,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 3,		-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 2,		-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= 4,		-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
+}
+
+-- Crafting mat distribution
+-- If true, distribute low quality (< green) craft mats to the
+-- lowest-ranked ALT; otherwise always send them to ROLE_CRAFTER.
+-- (unresearched items always go to ROLE_RESEARCH).
+CJRAB.ALTCraftDistribute = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= true,			-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= true,			-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= true,			-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= true,			-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= true,			-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= true,			-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= false,		-- 7
+}
+
+-- zones for which characters take surveys and treasure maps:
+CJRAB.CharZones = {
+	[C_Charlotte]		= {
+		"Glenumbra",
+		"Stormhaven",
+		},
+	[C_Calliope]		= {},
+	[C_Buffy]			= {},
+	[C_Gareth]			= {},
+	[C_Freddy]			= {},
+	[C_Kelvin]			= {},
+}
+
+-- Set to true to mark any unused (non-writ) ingredients as junk
+-- instead of sending to ROLE_INGREDIENT hoard
+CJRAB.JunkUnusedIngredients = false
+
+-- Set to true to keep racial writ style mats in the bank.
+-- Otherwise they are distributed to alts according to race.
+-- (Only applies to style mats marked as writs).
+CJRAB.WritStyleMatsInBank = true
+
 --=============================================================================
 -- FCO ItemSaver Dynamic Icons
 
