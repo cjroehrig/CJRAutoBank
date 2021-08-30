@@ -421,6 +421,13 @@ local function isInCharHoard(char, player, cbag, slot)
 		end
 	end
 
+	if char == CJRAB.ROLE_ENCHANT then
+		if isEnchant(t) and not is_writ(cbag,slot) then
+			HoardReason = "enchant hoard"
+			return true
+		end
+	end
+
 	if char == CJRAB.ROLE_RECIPE then
 		if t == ITEMTYPE_RECIPE and not IsItemLinkRecipeKnown(link) then
 			HoardReason = "provisioning recipe to learn"
@@ -604,12 +611,16 @@ local function isInBankHoard(bankBag, cbag, slot)
 		end
 
 		if t== ITEMTYPE_RECIPE and IsItemLinkRecipeKnown(link) then
-			HoardReason = "for any takers"
+			HoardReason = "recipe for any takers"
 			return true
 		end
 
-		if t == ITEMTYPE_RACIAL_STYLE_MOTIF then
-			HoardReason = "for any takers"
+		-- if st == SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then
+		-- nothing; per-account.  Just use them or discard... manually junk?
+
+
+		if	t == ITEMTYPE_RACIAL_STYLE_MOTIF then
+			HoardReason = "style motif for any takers"
 			return true
 		end
 
@@ -620,7 +631,7 @@ local function isInBankHoard(bankBag, cbag, slot)
 		end
 
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then
-			HoardReason = "for all to use"
+			HoardReason = "scroll for all to use"
 			return true
 		end
 

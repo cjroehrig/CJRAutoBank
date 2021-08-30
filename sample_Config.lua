@@ -113,6 +113,8 @@ CJRAB.ROLE_RECIPE		= C_MAIN		-- learns all unknown recipes
 CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
 
+CJRAB.ROLE_ENCHANT		= nil			-- enchant mats go to bank
+
 CJRAB.ROLE_ARCHIVE		= C_Calliope	-- Archived items (marked with reserve)
 CJRAB.ROLE_STYLES		= C_Buffy		-- (non-writ) style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
