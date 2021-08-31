@@ -37,8 +37,8 @@ CJRAB.CharsEnabled = {
 -- current crafting ranks for all alts
 -- NB: they must rank-up in lock-step for a given craft
 CJRAB.ALTCraftRank = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= 3,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= 3,		-- 2
+	[CRAFTING_TYPE_BLACKSMITHING]		= 4,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 4,		-- 2
 	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 2,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5

@@ -51,6 +51,19 @@ CJRAB_SI_CRAFTINGTYPE = {
 	"Blacksmithing", "Clothing", "Enchanting", "Alchemy",
 	"Provisioning", "Woodworking", "Jewelcrafting" }
 
+CJRAB_SI_CURRENCY = {
+	[0]="NO_CURRENCY",
+	"Gold",						-- 1
+	"Alliance Points",			-- 2
+	"Tel Var Stones",			-- 3
+	"Writ Vouchers",			-- 4
+	"Chaotic Creatia",			-- 5
+	"Crown Gems",				-- 6
+	"Crowns",					-- 7
+	"Style Stones",				-- 8
+	"Event Tickets",			-- 9
+	"Undaunted Keys",			-- 10
+}
 
 -- bag name
 CJRAB_SI_BAGNAME = {

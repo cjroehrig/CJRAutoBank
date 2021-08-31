@@ -10,6 +10,15 @@ local Dbg						= CJRAB.Dbg
 --=============================================================================
 -- Slash commands
 
+local function safepairs(tab, init)
+    if rawequal(tab, _G) then
+        return zo_insecureNext, tab, init
+    else
+        return next, tab, init
+    end
+end
+
+
 --=====================================
 function CJRAB.SlashCommands()
 
@@ -63,6 +72,29 @@ function CJRAB.SlashCommands()
 				if char then
 					Msg("%s straggler: %s", craftname, CJRAB.CharName(char))
 				end
+			end
+		end
+	end
+
+	SLASH_COMMANDS["/sifind"] = function(pat)
+		local i = 0
+		d(string.format("Searching for '%s'", pat))
+		for k,v in safepairs(_G) do
+			if type(k) == "string" and string.find(k, '^SI_') then
+				--[[
+				if i % 100 == 0 then
+					d(string.format("testing %s = %s [%s]",
+						tostring(k),
+						tostring(v),
+						GetString(v)
+						))
+				end
+				]]--
+				v = GetString(v)
+				if string.find(v, pat) then
+					d(string.format("%s = %s", k, v))
+				end
+				i = i + 1
 			end
 		end
 	end

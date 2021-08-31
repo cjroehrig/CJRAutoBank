@@ -721,31 +721,52 @@ local function withdrawHoardables( char, bankBag )
 	end
 end
 
---=====================================
-local function transferCurrency(char)
-	local amount, src, dst, msg
 
-	if char == CJRAB.ROLE_MONEY then
-		-- withdraw all
-		amount = GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_BANK)
+--=============================================================================
+-- Currencies
+
+--=====================================
+local function withdrawCurrency(char, curt, reserve)
+	local amount, src, dst
+	amount = GetCurrencyAmount(curt, CURRENCY_LOCATION_BANK)
+	amount = amount - reserve
+	if amount > 0 then
 		src = CURRENCY_LOCATION_BANK
 		dst = CURRENCY_LOCATION_CHARACTER
-		msg = "Withdrawing"
-
-	else
-		-- ALT: deposit all but 999G
-		amount = GetCurrencyAmount(CURT_MONEY, CURRENCY_LOCATION_CHARACTER)
-		amount = amount - 999
-		src = CURRENCY_LOCATION_CHARACTER
-		dst = CURRENCY_LOCATION_BANK
-		msg = "Depositing"
-	end
-
-	if amount > 0 then
-		Msg("%s %d G", msg, amount)
-		TransferCurrency( CURT_MONEY, amount, src, dst)
+		Msg("Withdrawing %d %s", amount, 
+			CJRAB.GetString('CJRAB_SI_CURRENCY', curt))
+		TransferCurrency( curt, amount, src, dst)
 	end
 end
+
+--=====================================
+local function depositCurrency(char, curt, reserve)
+	local amount, src, dst
+	amount = GetCurrencyAmount(curt, CURRENCY_LOCATION_CHARACTER)
+	amount = amount - reserve
+	if amount > 0 then
+		src = CURRENCY_LOCATION_CHARACTER
+		dst = CURRENCY_LOCATION_BANK
+		Msg("Depositing %d %s", amount,
+			CJRAB.GetString('CJRAB_SI_CURRENCY', curt))
+		TransferCurrency( curt, amount, src, dst)
+	end
+end
+
+--=====================================
+local function transferCurrencies(char)
+
+	if char == CJRAB.ROLE_MONEY then
+		-- withdraw all gold
+		withdrawCurrency( char, CURT_MONEY, 0)
+	else
+		-- ALT: deposit all but 999G
+		depositCurrency( char, CURT_MONEY, 999)
+	end
+	-- deposit all Tel Var stones
+	depositCurrency( char, CURT_TELVAR_STONES, 0)
+end
+
 
 
 --=============================================================================
@@ -797,7 +818,7 @@ function CJRAB.OpenBanking(bankBag)
 	CJRAB.ProcessTransfer()
 
 	-- Step 4:  Deposit/withdraw currency
-	transferCurrency(char)
+	transferCurrencies(char)
 
 	if CJRAB.DryRun then
 		Msg("DryRun complete.")
