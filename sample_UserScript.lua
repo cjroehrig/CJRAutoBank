@@ -605,8 +605,9 @@ local function isInBankHoard(bankBag, cbag, slot)
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
-		if isEnchant(t) and quality <= QUALITY_SUPERIOR then
-			HoardReason = "enchant hoard"
+		if not CJRAB_ROLE_ENCHANT and isEnchant(t)
+				and quality <= QUALITY_SUPERIOR then
+			HoardReason = "enchant hoard in bank"
 			return true
 		end
 
@@ -637,7 +638,7 @@ local function isInBankHoard(bankBag, cbag, slot)
 
 		-- Equip Writ mats for current ALT rank
 		if quality < QUALITY_FINE and isEqualALTCraftRank(link, t) then
-			HoardReason = "for writs"
+			HoardReason = "current writ mats"
 			return true
 		end
 
@@ -648,7 +649,7 @@ local function isInBankHoard(bankBag, cbag, slot)
 					t == ITEMTYPE_FOOD or
 					t == ITEMTYPE_DRINK then
 			if is_writ(cbag, slot) then
-				HoardReason = "for writs"
+				HoardReason = "marked for writs"
 				return true
 			end
 		end
