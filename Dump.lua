@@ -188,27 +188,51 @@ function CJRAB.DumpCraft(name)
 end
 
 --=====================================
-function CJRAB.DumpChar(str)
+function CJRAB.DumpChar(str, detailed)
 	-- dump our char info for char named 'str', or all if 'all'
+	if detailed == nil then detailed = true end
 	if not str or str == "" then str = GetUnitName("player") end
 	for i = 1, #CJRAB.Chars do
 		local c = CJRAB.Chars[i]
 		if str == c.name or str == "all" then
-			local msg
-			msg = string.format("%d: %s", i, c.name)
+			local msg = ""
+			if detailed then
+				msg = msg .. string.format("%d: ", i)
+			end
+				
+			msg = msg .. string.format("%s", c.name)
 			msg = msg ..  string.format(" level %d", c.level)
 			if c.gender == GENDER_MALE then msg = msg .. " male"
 			elseif c.gender == GENDER_FEMALE then msg = msg .. " female"
 			elseif c.gender == GENDER_NEUTRAL then msg = msg .. " neutered"
 			end
-			msg = msg ..  string.format(" %d:%s",
-						c.raceId, GetRaceName(c.gender, c.raceId))
-			msg = msg ..  string.format(" %d:%s",
-						c.classId, GetClassName(c.gender, c.classId))
-			msg = msg ..  string.format(" [%d:%s]",
+
+			msg = msg .. " "
+			if detailed then
+				msg = msg ..  string.format(" %d:", c.raceId )
+			end
+			msg = msg ..  string.format("%s", GetRaceName(c.gender, c.raceId))
+
+			msg = msg .. " "
+			if detailed then
+				msg = msg ..  string.format(" %d:", c.classId )
+			end
+			msg = msg ..  string.format("%s", GetClassName(c.gender, c.classId))
+
+			if detailed then
+				msg = msg ..  string.format(" [%d:%s]",
 						c.allianceId, GetAllianceName(c.allianceId))
-			msg = msg ..  string.format(" in %d:%s", 
+			else
+				msg = msg ..  string.format(" [%s]",
+						GetAllianceName(c.allianceId))
+			end
+			if detailed then
+				msg = msg ..  string.format(" in %d:%s", 
 						c.locationId, GetLocationName(c.locationId))
+			else
+				msg = msg ..  string.format(" in %s", 
+						GetLocationName(c.locationId))
+			end
 			d(msg)
 		end
 	end

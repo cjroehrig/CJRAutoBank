@@ -99,5 +99,9 @@ function CJRAB.SlashCommands()
 		end
 	end
 
+	SLASH_COMMANDS["/wmi"] = function(arg)
+		CJRAB.DumpChar("", false)
+	end
+
 
 end

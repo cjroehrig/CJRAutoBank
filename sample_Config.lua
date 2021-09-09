@@ -39,8 +39,8 @@ CJRAB.CharsEnabled = {
 CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 4,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 4,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 3,		-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= 2,		-- 4
+	[CRAFTING_TYPE_ENCHANTING]			= 4,		-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 3,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 4,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
@@ -82,6 +82,18 @@ CJRAB.JunkUnusedIngredients = false
 -- (Only applies to style mats marked as writs).
 CJRAB.WritStyleMatsInBank = true
 
+-- If all toons have equal rank and chance at DCing for quality mats, then set
+-- to false and quality items will be sent to the toon of lowest craft level.
+-- Otherwise (e.g. if your CRAFTER has Extraction skills), set to true to
+-- send all "quality" (>= green) items to ROLE_CRAFTER for deconstruction.
+-- (NB: this only applies to items without researchable traits for the
+-- ROLE_RESEARCH toon [requires the CraftStore addon])
+CJRAB.CrafterQualityDC = true
+
+-- store researchable items (for the ROLE_RESEARCH toon) in the bank instead
+-- of sending them to that toon.
+CJRAB.ResearchablesInBank = true
+
 --=============================================================================
 -- FCO ItemSaver Dynamic Icons
 
@@ -122,5 +134,5 @@ CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
 CJRAB.ROLE_TRAITS		= C_Freddy		-- trait mats
 CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
-CJRAB.ROLE_INGREDIENTS	= C_Kelvin		-- unused food/drink ingredients hoard
+CJRAB.ROLE_INGREDIENTS	= C_Freddy		-- unused food/drink ingredients hoard
 CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled crafting mats

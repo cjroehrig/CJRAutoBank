@@ -7,7 +7,6 @@ local Msg						= CJRAB.Msg
 local Err						= CJRAB.Err
 local Dbg						= CJRAB.Dbg
 
-local C_RESEARCH				= CJRAB.ROLE_RESEARCH
 
 --=============================================================================
 -- Globals
@@ -30,7 +29,8 @@ local QUALITY_LEGENDARY				= ITEM_QUALITY_LEGENDARY	-- 5
 local ITEMID_MALACHITE_SHARD				= 0xfcb2
 -- Nope, bound to character evidently
 -- local ITEMID_REWARD_WORTHY					= 0x238a9
-local ITEMTYPE_CROWN_POISON					= 0x1374a
+local ITEMID_CROWN_POISON					= 0x1374a
+local ITEMID_CROWN_POTION					= 0xfcc6	
 
 --=============================================================================
 -- Other AddOn interfaces
@@ -113,6 +113,10 @@ end
 local function isArchiveType(link, t)
 	-- Return True if this is a Archive type item where 
 	-- the RESERVED mark means to archive it.
+	local id = GetItemLinkItemId(link)
+	-- exceptions
+	if id == ITEMID_CROWN_POTION then return false end
+
 	if t == ITEMTYPE_FOOD then return true end
 	if t == ITEMTYPE_DRINK then return true end
 	if t == ITEMTYPE_POTION then return true end
@@ -284,6 +288,7 @@ end
 local function isUnresearchedTraitItem(char, link, t)
 	-- Return true if item link,t is needed for trait research by char
 
+	if not char then return false end		-- if ROLE_RESEARCH is nil
 	local trait = GetItemLinkTraitInfo(link)
 	if not trait or trait == 0 then return false end
 	-- skip intricate and ornate 
@@ -319,9 +324,12 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
 
-		if isUnresearchedTraitItem(C_RESEARCH, link, t) then return false end
+		if isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
+			return false
+		end
 
-		if not isGlyph(link, t) and quality > QUALITY_NORMAL then
+		if CJRAB.CrafterQualityDC and
+			not isGlyph(link, t) and quality > QUALITY_NORMAL then
 			-- don't get rare mats from low-level alts; send to crafter instead
 			if char == CJRAB.ROLE_CRAFTER then
 				HoardReason = "for mats deconstruction"
@@ -401,7 +409,7 @@ local function isInCharHoard(char, player, cbag, slot)
 		end
 		-- Crown poisons (for those Endeavors)
 		if t == ITEMTYPE_POISON and 
-					GetItemLinkItemId(link) == ITEMTYPE_CROWN_POISON then
+					GetItemLinkItemId(link) == ITEMID_CROWN_POISON then
 			HoardReason = "for poison endeavours"
 			return true
 		end
@@ -456,6 +464,13 @@ local function isInCharHoard(char, player, cbag, slot)
 		-- Equip boosters >= FINE
 		if quality <= QUALITY_SUPERIOR and isEquipBooster(t) then
 			HoardReason = "crafting boosters"
+			return true
+		end
+	end
+
+	if char == CJRAB.ROLE_REASEARCH and not CJRAB.ResearchablesInBank then
+		if isUnresearchedTraitItem(char, link, t) then
+			HoardReason = "to research"
 			return true
 		end
 	end
@@ -522,6 +537,7 @@ local function isInCharHoard(char, player, cbag, slot)
 		if (t == ITEMTYPE_CROWN_ITEM or name:find("^Crown")) and
 					-- exceptions...
 					t ~= ITEMTYPE_POISON and
+					t ~= ITEMTYPE_POTION and
 					t ~= ITEMTYPE_STYLE_MATERIAL then
 			HoardReason = "Crown items for future"
 			return true
@@ -656,8 +672,11 @@ local function isInBankHoard(bankBag, cbag, slot)
 
 		-- Bank all unknown trait Research items for RESEARCHER
 		-- (but leave them in the bank)
-		if isUnresearchedTraitItem(C_RESEARCH, link, t) then
-			HoardReason = "for " ..  CJRAB.CharName(C_RESEARCH) .. " to research"
+		if CJRAB.ResearchablesInBank and
+					isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
+			HoardReason = "for " ..  
+				CJRAB.CharName(CJRAB.ROLE_RESEARCH) ..
+				" to research [banked]"
 			return true
 		end
 	end
@@ -871,9 +890,14 @@ function CJRAB.Inventory(bag, slot, reason)
 		end
 	end
 
+	-- treasure items
+	if st == SPECIALIZED_ITEMTYPE_TREASURE and not IsItemStolen(bag, slot) then
+		isJunk = true
+	end
+
 	-- all poisons except Crown
-	if t == ITEMTYPE_POISON and 
-					GetItemLinkItemId(link) ~= ITEMTYPE_CROWN_POISON then
+	if t == ITEMTYPE_POISON and
+					GetItemLinkItemId(link) ~= ITEMID_CROWN_POISON then
 		isJunk = true
 	end
 
