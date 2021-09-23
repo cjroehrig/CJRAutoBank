@@ -53,38 +53,38 @@ CJRAB_SI_CRAFTINGTYPE = {
 
 CJRAB_SI_CURRENCY = {
 	[0]="NO_CURRENCY",
-	"Gold",						-- 1
-	"Alliance Points",			-- 2
-	"Tel Var Stones",			-- 3
-	"Writ Vouchers",			-- 4
-	"Chaotic Creatia",			-- 5
-	"Crown Gems",				-- 6
-	"Crowns",					-- 7
-	"Style Stones",				-- 8
-	"Event Tickets",			-- 9
-	"Undaunted Keys",			-- 10
+	"Gold",							-- 1
+	"Alliance Points",				-- 2
+	"Tel Var Stones",				-- 3
+	"Writ Vouchers",				-- 4
+	"Chaotic Creatia",				-- 5
+	"Crown Gems",					-- 6
+	"Crowns",						-- 7
+	"Style Stones",					-- 8
+	"Event Tickets",				-- 9
+	"Undaunted Keys",				-- 10
 }
 
 -- bag name
 CJRAB_SI_BAGNAME = {
 	[0] = "EQUIP_BAG",
-	"Backpack",					-- 1
-	"Bank",						-- 2
-	"GuildBank",				-- 3
-	"BuyBackBag",				-- 4
-	"VirtualBag",				-- 5
-	"SubscriberBank",			-- 6
-	"HouseBank1",				-- 7
-	"HouseBank2",				-- 8
-	"HouseBank3",				-- 9
-	"HouseBank4",				-- 10
-	"HouseBank5",				-- 11
-	"HouseBank6",				-- 12
-	"HouseBank7",				-- 13
-	"HouseBank8",				-- 14
-	"HouseBank9",				-- 15
-	"HouseBank10",				-- 16
-	"DeleteBag",				-- 17
+	"Backpack",						-- 1
+	"Bank",							-- 2
+	"GuildBank",					-- 3	500
+	"BuyBackBag",					-- 4	0
+	"VirtualBag",					-- 5	0
+	"SubscriberBank",				-- 6	170+
+	"Storage Coffer, Fortified",	-- 7	30	HouseBank1
+	"Storage Chest, <1>",			-- 8	60	HouseBank2
+	"Storage Coffer, <2>",			-- 9	30	HouseBank3
+	"Storage Coffer, <3>",			-- 10	30	HouseBank4
+	"Storage Coffer, <4>",			-- 11	30	HouseBank5
+	"Storage Chest, <2>",			-- 12	60	HouseBank6
+	"Storage Chest, <3>",			-- 13	60	HouseBank7
+	"Storage Chest, <4>",			-- 14	60	HouseBank8
+	"UNKNOWN1",					    -- 15	0
+	"UNKNOWN2",						-- 16	0
+	"DeleteBag",					-- 17	23
 }
 
 --=====================================
@@ -539,10 +539,16 @@ function CJRAB:Initialize()
 		d("CJRAB.Logging = " .. tostring(CJRAB.Logging))
 	end
 
-	SLASH_COMMANDS["/dumpbag"] = function(pat) CJRAB.DumpBag(BAG_BACKPACK, pat) end
+	SLASH_COMMANDS["/dumppack"] = function(pat) CJRAB.DumpBag(BAG_BACKPACK, pat) end
+	SLASH_COMMANDS["/dumpbag"] = function(bag,pat) CJRAB.DumpBag(bag, pat) end
 	SLASH_COMMANDS["/dumpbank"] = function(pat) CJRAB.DumpBag(BAG_BANK, pat) end
 	SLASH_COMMANDS["/dumpchar"] = function(name) CJRAB.DumpChar(name) end
 	SLASH_COMMANDS["/dumpcharraw"] = function(name) CJRAB.DumpCharRaw(name) end
+	SLASH_COMMANDS["/listbags"] = function(arg)
+		for i, name in pairs(CJRAB_SI_BAGNAME) do
+			Msg("%d: %s\n", i, name)
+		end
+	end
 
 	-- User slash commands
 	if CJRAB.SlashCommands then

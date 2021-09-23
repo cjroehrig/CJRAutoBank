@@ -9,8 +9,20 @@ local Dbg						= CJRAB.Dbg
 
 
 --=============================================================================
--- Globals
-local PlayerChar				-- valid between OpenBanking/CloseBanking
+-- Globals for use between OpenBanking and CloseBanking
+local PlayerChar
+local CountCharDC
+local DeconstructItems = {				-- indexed by TradeskillType
+	[CRAFTING_TYPE_BLACKSMITHING]       = 0,        -- 1
+    [CRAFTING_TYPE_CLOTHIER]            = 0,        -- 2
+    [CRAFTING_TYPE_ENCHANTING]          = 0,        -- 3
+    [CRAFTING_TYPE_ALCHEMY]             = 0,        -- 4
+    [CRAFTING_TYPE_PROVISIONING]        = 0,        -- 5
+    [CRAFTING_TYPE_WOODWORKING]         = 0,        -- 6
+    [CRAFTING_TYPE_JEWELRYCRAFTING]     = 0,        -- 7
+}
+
+
 --=============================================================================
 -- Extra ESO Constants
 
@@ -31,6 +43,7 @@ local ITEMID_MALACHITE_SHARD				= 0xfcb2
 -- local ITEMID_REWARD_WORTHY					= 0x238a9
 local ITEMID_CROWN_POISON					= 0x1374a
 local ITEMID_CROWN_POTION					= 0xfcc6	
+local ITEMID_COUNTERFEIT_PARDON_EDICT		= 0x11863
 
 --=============================================================================
 -- Other AddOn interfaces
@@ -323,6 +336,7 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
 	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
+		local craft = GetItemLinkCraftingSkillType(link)
 
 		if isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
 			return false
@@ -333,18 +347,26 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 			-- don't get rare mats from low-level alts; send to crafter instead
 			if char == CJRAB.ROLE_CRAFTER then
 				HoardReason = "for mats deconstruction"
+				if CountCharDC and char == PlayerChar then
+					DeconstructItems[craft] = DeconstructItems[craft] + 1
+				end
 				return true
 			end
 		else
-			local craft = GetItemLinkCraftingSkillType(link)
 			if CJRAB.ALTCraftDistribute[craft] then
 				-- send to char with the lowest skill
 				if char == CJRAB.LowestCraftLevelChar(craft) then
 					HoardReason = "for ALT XP deconstruction"
+					if CountCharDC and char == PlayerChar then
+						DeconstructItems[craft] = DeconstructItems[craft] + 1
+					end
 					return true
 				end
 			elseif char == CJRAB.ROLE_CRAFTER then
 				HoardReason = "for CRAFTER XP deconstruction"
+				if CountCharDC and char == PlayerChar then
+					DeconstructItems[craft] = DeconstructItems[craft] + 1
+				end
 				return true
 			end
 		end
@@ -648,8 +670,12 @@ local function isInBankHoard(bankBag, cbag, slot)
 		end
 
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then
-			HoardReason = "scroll for all to use"
-			return true
+			-- exceptions...
+			local id = GetItemLinkItemId(link)
+			if id ~= ITEMID_COUNTERFEIT_PARDON_EDICT then
+				HoardReason = "scroll for all to use"
+				return true
+			end
 		end
 
 		-- Equip Writ mats for current ALT rank
@@ -799,7 +825,13 @@ function CJRAB.OpenBanking(bankBag)
 	local char = CJRAB.GetChar(charname)
 	-- skip if character is not enabled
 	if not char or not CJRAB.Chars[char].enabled then return false end
-	PlayerChar = char		-- set global var
+
+	-- set some global vars for the duration of banking
+	PlayerChar = char
+	for craft, _ in ipairs(DeconstructItems) do
+		DeconstructItems[craft] = 0
+	end
+
 
 	-- XXX: only do our actual bank for now...
 	if bankBag ~= BAG_BANK then return end
@@ -826,12 +858,15 @@ function CJRAB.OpenBanking(bankBag)
 	CJRAB.InitTransfer(bankBag)		-- NB: discards any pending transfers
 
 	-- Step 1:  Deposit all bankables to existing stacks to clear backpack
+	CountCharDC = true
 	depositHoardables(char, bankBag, true)
 
 	-- Step 2:  Withdraw all char-specific collectibles to clear bank space
+	CountCharDC = true
 	withdrawHoardables(char, bankBag)
 
 	-- Step 3:  Deposit all bankable now
+	CountCharDC = false
 	depositHoardables(char, bankBag)
 
 	-- Initiate the transfer
@@ -848,6 +883,13 @@ end
 --=====================================
 function CJRAB.CloseBanking(bankBag)
 	-- XXX: Free up the CloneBags
+
+	for craft, count in ipairs(DeconstructItems) do
+		if count > 0 then
+			Msg( "%d %s items to deconstruct.", count, 
+					CJRAB.GetString('CJRAB_SI_CRAFTINGTYPE', craft))
+		end
+	end
 
 	Msg("See you next time.")
 end

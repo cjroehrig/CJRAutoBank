@@ -35,6 +35,11 @@ end
 
 --=====================================
 function CJRAB.DumpBag(bag, pat)
+	if bag == nil or bag == "" then
+		bag = BAG_BACKPACK
+	else
+		bag = tonumber(bag)
+	end
 	for slot = 0, GetBagSize(bag)-1 do
 		if HasItemInSlot(bag, slot) then
 			if pat and pat ~= "" then
