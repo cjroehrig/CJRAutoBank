@@ -50,6 +50,7 @@ function CJRAB.CloneBagItem(bag, slot)
 		if self.isStolen ~= item.isStolen then return false end
 		if self.isCrownCrate ~= item.isCrownCrate then return false end
 		if self.isCrownStore ~= item.isCrownStore then return false end
+		if self.level ~= item.level then return false end
 		return true
 	end;
 
@@ -65,6 +66,7 @@ function CJRAB.CloneBagItem(bag, slot)
 		local t, st = GetItemType(bag, slot)
 		this.link 			= GetItemLink(bag, slot, 1)
 		this.id				= GetItemId(bag, slot)
+		this.level			= GetItemLevel(bag, slot)
 		this.stack			= stack
 		this.max			= max
 		this.t				= t

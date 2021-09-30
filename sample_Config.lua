@@ -34,16 +34,19 @@ CJRAB.CharsEnabled = {
 --=============================================================================
 -- Config for current state 
 
+-- Set to true if you own Summerset (Jewelcrafting)
+CJRAB.HasJewelcrafting = true
+
 -- current crafting ranks for all alts
 -- NB: they must rank-up in lock-step for a given craft
 CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 4,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 4,		-- 2
 	[CRAFTING_TYPE_ENCHANTING]			= 4,		-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= 3,		-- 4
+	[CRAFTING_TYPE_ALCHEMY]				= 4,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 4,		-- 6
-	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 0,		-- 7
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
 }
 
 -- Crafting mat distribution
@@ -57,14 +60,22 @@ CJRAB.ALTCraftDistribute = {
 	[CRAFTING_TYPE_ALCHEMY]				= true,			-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= true,			-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= true,			-- 6
-	[CRAFTING_TYPE_JEWELRYCRAFTING]		= false,		-- 7
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= true,			-- 7
 }
+-- Set to true to distribute raw mats to the ROLE_CRAFTER
+-- (otherwise they are just ignored)
+CJRAB.DistribRawMats					= true
 
 -- zones for which characters take surveys and treasure maps:
 CJRAB.CharZones = {
 	[C_Charlotte]		= {
+		"Stros M'Kai",
+		"Betnikh",
+		"Bleakrock",
+		"Bal Foyen",
 		"Glenumbra",
 		"Stormhaven",
+--		"Coldharbour",
 		},
 	[C_Calliope]		= {},
 	[C_Buffy]			= {},
@@ -130,8 +141,8 @@ CJRAB.ROLE_ENCHANT		= nil			-- enchant mats go to bank
 CJRAB.ROLE_ARCHIVE		= C_Calliope	-- Archived items (marked with reserve)
 CJRAB.ROLE_STYLES		= C_Buffy		-- (non-writ) style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
+CJRAB.ROLE_TRAITS		= C_Buffy		-- trait mats
 CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
-CJRAB.ROLE_TRAITS		= C_Freddy		-- trait mats
 CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
 CJRAB.ROLE_INGREDIENTS	= C_Freddy		-- unused food/drink ingredients hoard

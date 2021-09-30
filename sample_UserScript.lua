@@ -107,9 +107,11 @@ local function isGlyph(link, t)
 end
 local function isJewelryMat(link, t)
 	if t == ITEMTYPE_JEWELRYCRAFTING_MATERIAL then return true end
+	if t == ITEMTYPE_JEWELRYCRAFTING_BOOSTER then return true end
+	if t == ITEMTYPE_JEWELRY_TRAIT	then return true end
 	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_MATERIAL then return true end
 	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_BOOSTER then return true end
-	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_TRAIT then return true end
+	if t == ITEMTYPE_JEWELRY_RAW_TRAIT then return true end
 	return false
 end
 
@@ -153,6 +155,21 @@ local function isEquipBooster(t)
 	if t == ITEMTYPE_BLACKSMITHING_BOOSTER		then return true end
 	if t == ITEMTYPE_CLOTHIER_BOOSTER			then return true end
 	if t == ITEMTYPE_WOODWORKING_BOOSTER		then return true end
+	-- always keep >Fine jewelcrafting boosters:
+	if t == ITEMTYPE_JEWELRYCRAFTING_BOOSTER	then return true end
+	if t == ITEMTYPE_JEWELRYCRAFTING_RAW_BOOSTER	then return true end
+	return false
+end
+
+local function isRawMat(t)
+	if t == ITEMTYPE_BLACKSMITHING_RAW_MATERIAL	then return true end
+	if t == ITEMTYPE_CLOTHIER_RAW_MATERIAL		then return true end
+	if t == ITEMTYPE_WOODWORKING_RAW_MATERIAL	then return true end
+	if CJRAB.HasJewelcrafting then
+		-- only keep jewelcrafting mats if we have Jewelcrafting
+		if t == ITEMTYPE_JEWELRYCRAFTING_RAW_MATERIAL	then return true end
+		if t == ITEMTYPE_JEWELRY_RAW_TRAIT	then return true end
+	end
 	return false
 end
 
@@ -160,6 +177,10 @@ local function isEquipMat(t)
 	if t == ITEMTYPE_BLACKSMITHING_MATERIAL		then return true end
 	if t == ITEMTYPE_CLOTHIER_MATERIAL			then return true end
 	if t == ITEMTYPE_WOODWORKING_MATERIAL		then return true end
+	if CJRAB.HasJewelcrafting then
+		-- only keep jewelcrafting mats if we have Jewelcrafting
+		if t == ITEMTYPE_JEWELRYCRAFTING_MATERIAL		then return true end
+	end
 	return false
 end
 
@@ -171,6 +192,7 @@ local function isALTCraftMat(link, t)
 	-- return True if this a mat managed automatically by ALTCraftRank 
 	if t == ITEMTYPE_POTION_BASE				then return true end
 	if isEquipMat(t) 							then return true end
+	if isRawMat(t) 								then return true end
 	return false
 end
 
@@ -187,10 +209,11 @@ local function cmpALTCraftRank(link, t)
 	-- Return nil if item is not an ALTCraftMat.
 
 	if not isALTCraftMat(link, t) then return nil end
-	local skillRank = GetItemLinkRequiredCraftingSkillRank(link)
 	local craft = GetItemLinkCraftingSkillType(link)
+	if craft == 0 or craft == nil then return nil end
+	local skillRank = GetItemLinkRequiredCraftingSkillRank(link)
+	if skillRank == 0 or skillRank == nil then return nil end
 	local crafterRank = getALTCraftRank(craft)
-
 	return skillRank - crafterRank
 end
 
@@ -312,9 +335,9 @@ local function isUnresearchedTraitItem(char, link, t)
 		if trait == ITEM_TRAIT_TYPE_WEAPON_INTRICATE then return false end
 		if trait == ITEM_TRAIT_TYPE_WEAPON_ORNATE then return false end
 	elseif isJewelry(link, t) then
-		-- if trait == ITEM_TRAIT_TYPE_JEWELRY_INTRICATE then return false end
-		-- if trait == ITEM_TRAIT_TYPE_JEWELRY_ORNATE then return false end
-		return false	-- no Summerset...
+		if not CJRAB.HasJewelcrafting then return false end
+		if trait == ITEM_TRAIT_TYPE_JEWELRY_INTRICATE then return false end
+		if trait == ITEM_TRAIT_TYPE_JEWELRY_ORNATE then return false end
 	end
 
 	-- check CraftStore data
@@ -488,6 +511,11 @@ local function isInCharHoard(char, player, cbag, slot)
 			HoardReason = "crafting boosters"
 			return true
 		end
+		-- Raw mats if we're distributing them
+		if CJRAB.DistribRawMats and isRawMat(t) then
+			HoardReason = "raw mats"
+			return true
+		end
 	end
 
 	if char == CJRAB.ROLE_REASEARCH and not CJRAB.ResearchablesInBank then
@@ -560,6 +588,7 @@ local function isInCharHoard(char, player, cbag, slot)
 					-- exceptions...
 					t ~= ITEMTYPE_POISON and
 					t ~= ITEMTYPE_POTION and
+					t ~= ITEMTYPE_FOOD and
 					t ~= ITEMTYPE_STYLE_MATERIAL then
 			HoardReason = "Crown items for future"
 			return true
@@ -572,7 +601,7 @@ local function isInCharHoard(char, player, cbag, slot)
 			return true
 		end
 		if quality > QUALITY_SUPERIOR and
-				(isEquipMat(t) or isEquipBooster(t)) then
+				(isEquipMat(t) or isEquipBooster(t) or isRawMat(t)) then
 			HoardReason = "epic craft mats for future"
 			return true
 		end
@@ -919,10 +948,14 @@ function CJRAB.Inventory(bag, slot, reason)
 		-- green+ stuff is DC'd for mats
 		if trait == ITEM_TRAIT_TYPE_WEAPON_ORNATE then isJunk=true end
 		if trait == ITEM_TRAIT_TYPE_ARMOR_ORNATE then isJunk=true end
--- 		if trait == ITEM_TRAIT_TYPE_JEWELRY_ORNATE then isJunk=true end
+ 		if trait == ITEM_TRAIT_TYPE_JEWELRY_ORNATE then isJunk=true end
 	end
-	-- jewelery (don't have Summerset)
-	if isJewelryMat(link, t) then isJunk = true end
+	-- junk ordinary jewelery mats if we don't have Summerset
+	if not CJRAB.HasJewelcrafting  then
+		if quality < QUALITY_FINE and isJewelryMat(link, t) then
+			isJunk = true
+		end
+	end
 
 	if CJRAB.JunkUnusedIngredients then
 		if t == ITEMTYPE_INGREDIENT and not is_writ(bag,slot) then
