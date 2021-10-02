@@ -358,7 +358,8 @@ end
 local function isForDeconstruction(char, cbag, slot, link, t, quality)
 	-- return true if the item is for deconstruction, and
 	-- set HoardReason accordingly.
-	if isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) then
+	if	isArmor(link, t) or isWeapon(link, t) or isGlyph(link, t) or
+		(CJRAB.HasJewelcrafting and  isJewelry(link,t)) then
 		local craft = GetItemLinkCraftingSkillType(link)
 
 		if isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
