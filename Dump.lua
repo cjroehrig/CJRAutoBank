@@ -32,7 +32,6 @@ local function dstr(stype, n)
 	return s
 end
 
-
 --=====================================
 function CJRAB.DumpBag(bag, pat)
 	if bag == nil or bag == "" then
@@ -40,27 +39,44 @@ function CJRAB.DumpBag(bag, pat)
 	else
 		bag = tonumber(bag)
 	end
-	for slot = 0, GetBagSize(bag)-1 do
-		if HasItemInSlot(bag, slot) then
-			if pat and pat ~= "" then
-				local link = GetItemLink(bag, slot)
-				local name = GetItemLinkName(link)
-				name = LocalizeString("<<1>>", name)
-				name = name:lower()
-				pat = pat:lower()
-				match = name:find(pat, 1, true)
-				-- Msg( "find(%s, %s)", name, pat)
-			else
-				match = true
+	if bag == BAG_VIRTUAL then
+		for slot, item in pairs(SHARED_INVENTORY.bagCache[BAG_VIRTUAL]) do
+			if item ~= nil then
+				filterAndDumpSlot(bag, slot, pat)
+			elseif not pat or pat == "" then
+				d(string.format("%s[%d]: EMPTY", CJRAB.BagName(bag), slot))
 			end
-			if match then
-				CJRAB.DumpSlot(bag, slot)
+		end
+	else
+		for slot = 0, GetBagSize(bag)-1 do
+			if HasItemInSlot(bag, slot) then
+				filterAndDumpSlot(bag, slot, pat)
+			elseif not pat or pat == "" then
+				d(string.format("%s[%d]: EMPTY", CJRAB.BagName(bag), slot))
 			end
-		elseif not pat or pat == "" then
-			d(string.format("%s[%d]: EMPTY", CJRAB.BagName(bag), slot))
 		end
 	end
 end
+
+--=====================================
+function filterAndDumpSlot(bag, slot, pat)
+	local match
+	if pat and pat ~= "" then
+		local link = GetItemLink(bag, slot)
+		local name = GetItemLinkName(link)
+		name = LocalizeString("<<1>>", name)
+		name = name:lower()
+		pat = pat:lower()
+		match = name:find(pat, 1, true)
+		-- Msg( "find(%s, %s)", name, pat)
+	else
+		match = true
+	end
+	if match then
+		CJRAB.DumpSlot(bag, slot)
+	end
+end
+
 
 --=====================================
 function CJRAB.DumpSlot(bag, slot)

@@ -9,6 +9,9 @@ CJRAB.DryRun		= true			-- don't do any transfers; just show them
 CJRAB.Logging		= true			-- log all inventory in/out
 CJRAB.Debug			= false			-- log debug messages
 
+-- for debugging:
+CJRAB.NoQueue		= false			-- don't add to TransferQueue
+
 --=============================================================================
 -- CHARACTER DEFINITIONS
 
@@ -40,9 +43,9 @@ CJRAB.HasJewelcrafting = true
 -- current crafting ranks for all alts
 -- NB: they must rank-up in lock-step for a given craft
 CJRAB.ALTCraftRank = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= 4,		-- 1
+	[CRAFTING_TYPE_BLACKSMITHING]		= 5,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 4,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 4,		-- 3
+	[CRAFTING_TYPE_ENCHANTING]			= 5,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 4,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 4,		-- 6
@@ -76,6 +79,7 @@ CJRAB.CharZones = {
 		"Glenumbra",
 		"Stormhaven",
 --		"Coldharbour",
+		"Blackwood",
 		},
 	[C_Calliope]		= {},
 	[C_Buffy]			= {},
@@ -143,7 +147,7 @@ CJRAB.ROLE_STYLES		= C_Buffy		-- (non-writ) style mats
 CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
 CJRAB.ROLE_TRAITS		= C_Buffy		-- trait mats
 CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
-CJRAB.ROLE_CROWN		= C_Freddy		-- crown items
+CJRAB.ROLE_CROWN		= C_Calliope	-- crown items
 CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
 CJRAB.ROLE_INGREDIENTS	= C_Freddy		-- unused food/drink ingredients hoard
 CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled crafting mats

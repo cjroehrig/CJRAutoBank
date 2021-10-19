@@ -237,8 +237,8 @@ function CJRAB.CloneBag(bag)
 			end
 		else
 			-- new slot; copy data from sbag
-			Dbg("CloneBag:AddItem: copying data from %s[%s]: %s",
-				sbag:BagName(), sslot, sbag:ItemName(sslot))
+			-- Dbg("CloneBag:AddItem: copying data from %s[%s]: %s",
+			--	sbag:BagName(), sslot, sbag:ItemName(sslot))
 
 			slot = slot+1 -- CloneBag.items uses offset 1 
 			local item = sbag:GetItem(sslot)
@@ -272,14 +272,23 @@ function CJRAB.CloneBag(bag)
 		-- Transfer the item in slot to the CloneBag dbag
 		-- this is essentially the same as do_transfer but operates
 		-- immediately on the clone bags.
+		local dbag_name
+		if dbag == nil then
+			dbag_name = CJRAB.BagName(BAG_VIRTUAL)
+		else
+			dbag_name = dbag:BagName()
+		end
 		Dbg( "CloneBag:Transfer %s[%s] --> %s[%s]   %d %s '%s'",
 			self:BagName(), slot,
-			dbag:BagName(), dstSlot,
+			dbag_name, dstSlot,
 			count, self:ItemName(slot),
 			msg
 			)
 
-		dbag:AddItem(dstSlot, self, slot, count)
+		if dbag ~= nil then
+			-- dbag == nil means it is BAG_VIRTUAL
+			dbag:AddItem(dstSlot, self, slot, count)
+		end
 		self:RemoveItem(slot, count)
 	end;
 

@@ -576,7 +576,8 @@ local function isInCharHoard(char, player, cbag, slot)
 
 	if char == CJRAB.ROLE_TRAITS then
 		-- trait mats
-		if t == ITEMTYPE_WEAPON_TRAIT or t == ITEMTYPE_ARMOR_TRAIT then
+		if t == ITEMTYPE_WEAPON_TRAIT or t == ITEMTYPE_ARMOR_TRAIT or
+				(CJRAB.HasJewelcrafting and t == ITEMTYPE_JEWELRY_TRAIT) then
 			HoardReason = "trait mats for future"
 			return true
 		end
@@ -786,6 +787,12 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 end
 
 --=====================================
+local function isCraftBaggable(item)
+	-- return item.id == 0xb31b		-- Jejota
+	return CanItemLinkBeVirtual(item.link)
+end
+
+--=====================================
 local function withdrawHoardables( char, bankBag )
 	local str, count
 	local bbag = CJRAB.TransferBags[bankBag]
@@ -793,6 +800,22 @@ local function withdrawHoardables( char, bankBag )
 		HoardReason = ""
 		if isInCharHoard(char, char, bbag, slot) then
 			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
+		elseif HasCraftBagAccess() and isCraftBaggable(bbag:GetItem(slot)) then
+			HoardReason = "for CraftBag"
+			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
+		end
+	end
+end
+
+--=====================================
+local function depositCraftBag( char )
+	local str, count
+	local cbag = CJRAB.TransferBags[BAG_BACKPACK]
+	if not HasCraftBagAccess() then return end
+
+	for slot in cbag:Items() do
+		if isCraftBaggable(cbag:GetItem(slot)) then
+			CJRAB.Transfer(BAG_BACKPACK, slot, BAG_VIRTUAL, "")
 		end
 	end
 end
@@ -841,6 +864,8 @@ local function transferCurrencies(char)
 	end
 	-- deposit all Tel Var stones
 	depositCurrency( char, CURT_TELVAR_STONES, 0)
+	-- deposit all Alliance Points
+	depositCurrency( char, CURT_ALLIANCE_POINTS, 0)
 end
 
 
@@ -887,22 +912,29 @@ function CJRAB.OpenBanking(bankBag)
 	-- Initialize all the CloneBags
 	CJRAB.InitTransfer(bankBag)		-- NB: discards any pending transfers
 
-	-- Step 1:  Deposit all bankables to existing stacks to clear backpack
+	-- Deposit any CraftBag items to clear space
+	depositCraftBag(char)
+
+	-- Deposit all bankables to existing stacks to clear backpack
 	CountCharDC = true
 	depositHoardables(char, bankBag, true)
 
-	-- Step 2:  Withdraw all char-specific collectibles to clear bank space
+	-- Withdraw all char-specific collectibles to clear bank space
+	-- (includes any craftables for CraftBag deposit)
 	CountCharDC = true
 	withdrawHoardables(char, bankBag)
 
-	-- Step 3:  Deposit all bankable now
+	-- Deposit any CraftBag items again
+	depositCraftBag(char)
+
+	-- Deposit all bankable now
 	CountCharDC = false
 	depositHoardables(char, bankBag)
 
 	-- Initiate the transfer
 	CJRAB.ProcessTransfer()
 
-	-- Step 4:  Deposit/withdraw currency
+	-- Deposit/withdraw currency
 	transferCurrencies(char)
 
 	if CJRAB.DryRun then

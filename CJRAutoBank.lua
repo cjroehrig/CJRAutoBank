@@ -72,7 +72,7 @@ CJRAB_SI_BAGNAME = {
 	"Bank",							-- 2
 	"GuildBank",					-- 3	500
 	"BuyBackBag",					-- 4	0
-	"VirtualBag",					-- 5	0
+	"CraftBag",						-- 5	-	VirtualBag
 	"SubscriberBank",				-- 6	170+
 	"Storage Coffer, Fortified",	-- 7	30	HouseBank1
 	"Storage Chest, <1>",			-- 8	60	HouseBank2
@@ -299,7 +299,12 @@ function CJRAB.InitTransfer(bankBag)
 
 	-- set up the working plan CloneBags
 	for i = 1, BAG_MAX_VALUE do
-		CJRAB.TransferBags[i] = {}
+		if i == BAG_VIRTUAL then
+			-- virtual bags are weird: all slotId == itemId
+			CJRAB.TransferBags[i] = nil
+		else
+			CJRAB.TransferBags[i] = {}
+		end
 	end
 	CJRAB.TransferBags[bankBag] = CJRAB.CloneBag(bankBag)
 	CJRAB.TransferBags[BAG_BACKPACK] = CJRAB.CloneBag(BAG_BACKPACK)
@@ -386,14 +391,25 @@ function CJRAB.TransferFill(bag, slot, dstBag, reason)
 	-- Transfer item from bag, slot to dstBag but only to an existing stack.
 	-- No new stacks are created.
 	-- Returns the count of the number of items transferred.
+	-- NB: only dstBag can be BAG_VIRTUAL
 	local count, max, id, dst_slot, avail, msg
 	local tx_count = 0
 	local sbag = CJRAB.TransferBags[bag]
 	local dbag = CJRAB.TransferBags[dstBag]
+	local item = sbag:GetItem(slot)
 
 	count, max = sbag:GetSlotStackSize(slot)
-	if count == max then return 0 end	-- full stack, forget it
-	dst_slot, avail = dbag:GetStackableSlot(sbag:GetItem(slot))
+
+	if dstBag == BAG_VIRTUAL then
+		-- slots are the item ID
+		-- NB: dbag == nil in this case
+		dst_slot = item.id
+		avail = 2^31		-- XXX; this is arbitrary
+	else
+		if count == max then return 0  end-- a full stack, forget it
+		dst_slot, avail = dbag:GetStackableSlot(item)
+	end
+
 	if dst_slot then
 		if count <= avail then
 			tx_count = count
@@ -403,8 +419,10 @@ function CJRAB.TransferFill(bag, slot, dstBag, reason)
 		msg = makeTxMessage(bag, slot, dstBag, tx_count, reason)
 
 		-- schedule the actual transfer
-		table.insert(CJRAB.TransferQueue, function()
+		if not CJRAB.NoQueue then
+			table.insert(CJRAB.TransferQueue, function()
 				do_transfer(bag, slot, dstBag, dst_slot, tx_count, msg) end)
+		end
 		-- do the clone transfer to update quantities
 		sbag:Transfer(slot, dbag, dst_slot, tx_count, msg)
 
@@ -431,6 +449,7 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 	-- transfer any remainder
 	count = count - tx_count
 	if count > 0 then
+		-- NB: should never get here if dstBag == BAG_VIRTUAL; count = 0
 		tx_count = count
 
 		-- find an empty slot
@@ -442,8 +461,10 @@ function CJRAB.Transfer(bag, slot, dstBag, reason)
 
 		msg = makeTxMessage(bag, slot, dstBag, tx_count, reason)
 		-- schedule the actual transfer
-		table.insert(CJRAB.TransferQueue, function()
+		if not CJRAB.NoQueue then
+			table.insert(CJRAB.TransferQueue, function()
 				do_transfer(bag, slot, dstBag, dst_slot, tx_count, msg) end)
+		end
 		-- do the clone transfer to update quantities
 		sbag:Transfer(slot, dbag, dst_slot, tx_count, msg)
 	end
@@ -546,7 +567,7 @@ function CJRAB:Initialize()
 	SLASH_COMMANDS["/dumpcharraw"] = function(name) CJRAB.DumpCharRaw(name) end
 	SLASH_COMMANDS["/listbags"] = function(arg)
 		for i, name in pairs(CJRAB_SI_BAGNAME) do
-			Msg("%d: %s\n", i, name)
+			Msg("%d: %s [%d]\n", i, name, GetBagSize(i))
 		end
 	end
 
