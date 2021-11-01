@@ -44,11 +44,11 @@ CJRAB.HasJewelcrafting = true
 -- NB: they must rank-up in lock-step for a given craft
 CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 5,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= 4,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 5,		-- 3
+	[CRAFTING_TYPE_CLOTHIER]			= 5,		-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= 6,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 4,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
-	[CRAFTING_TYPE_WOODWORKING]			= 4,		-- 6
+	[CRAFTING_TYPE_WOODWORKING]			= 5,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
 }
 
@@ -69,8 +69,8 @@ CJRAB.ALTCraftDistribute = {
 -- (otherwise they are just ignored)
 CJRAB.DistribRawMats					= true
 
--- zones for which characters take surveys and treasure maps:
-CJRAB.CharZones = {
+-- patterns for which characters take surveys and treasure maps:
+CJRAB.CharSurveys = {
 	[C_Charlotte]		= {
 		"Stros M'Kai",
 		"Betnikh",
@@ -78,14 +78,19 @@ CJRAB.CharZones = {
 		"Bal Foyen",
 		"Glenumbra",
 		"Stormhaven",
+		"Rivenspire",
 --		"Coldharbour",
-		"Blackwood",
+--		"Blackwood",
 		},
 	[C_Calliope]		= {},
 	[C_Buffy]			= {},
 	[C_Gareth]			= {},
 	[C_Freddy]			= {},
-	[C_Kelvin]			= {},
+	[C_Kelvin]			= {
+		"Alchemist",
+		"Enchanter",
+		"Jewelry",
+	},
 }
 
 -- Set to true to mark any unused (non-writ) ingredients as junk

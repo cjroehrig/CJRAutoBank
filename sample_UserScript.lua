@@ -434,25 +434,26 @@ local function isInCharHoard(char, player, cbag, slot)
 	-- https://wiki.esoui.com/Constant_Values#ITEMTYPE_ADDITIVE
 	-- https://wiki.esoui.com/Constant_Values#SPECIALIZED_ITEMTYPE_ADDITIVE
 
+	-- surveys for this char
+	if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
+		for _, pat in ipairs(CJRAB.CharSurveys[char]) do
+			if name:find(pat) then
+				HoardReason = CJRAB.CharName(char) .. "'s survey hoard"
+				return true
+			end
+		end
+	end
+	-- treasure maps for this char
+	if st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
+		for _, pat in ipairs(CJRAB.CharSurveys[char]) do
+			if name:find(pat) then
+				HoardReason = CJRAB.CharName(char) .. "'s treasure map hoard"
+				return true
+			end
+		end
+	end
+
 	if char == CJRAB.ROLE_QUESTER then
-		-- surveys for the current zone
-		if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
-			for _, zone in ipairs(CJRAB.CharZones[char]) do
-				if name:find(zone) then
-					HoardReason = "survey for current zones"
-					return true
-				end
-			end
-		end
-		-- treasure maps for the current zone
-		if st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
-			for _, zone in ipairs(CJRAB.CharZones[char]) do
-				if name:find(zone) then
-					HoardReason = "treasure map for current zones"
-					return true
-				end
-			end
-		end
 		-- Crown poisons (for those Endeavors)
 		if t == ITEMTYPE_POISON and 
 					GetItemLinkItemId(link) == ITEMID_CROWN_POISON then
@@ -559,16 +560,16 @@ local function isInCharHoard(char, player, cbag, slot)
 		if	st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT or
 			st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
 			local isCurr = false
-			for toon, zones in pairs(CJRAB.CharZones) do
-				for _, zone in ipairs(zones) do
-					if name:find(zone) then
+			for toon, patterns in pairs(CJRAB.CharSurveys) do
+				for _, pat in ipairs(patterns) do
+					if name:find(pat) then
 						isCurr = true
 						break
 					end
 				end
 			end
 			if not isCurr then
-				HoardReason = "survey/treasure map hoard for future zones"
+				HoardReason = "remainder survey/treasure map hoard"
 				return true
 			end
 		end
