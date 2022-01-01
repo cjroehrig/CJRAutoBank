@@ -79,8 +79,8 @@ CJRAB_SI_BAGNAME = {
 	"Storage Coffer, <2>",			-- 9	30	HouseBank3
 	"Storage Coffer, <3>",			-- 10	30	HouseBank4
 	"Storage Coffer, <4>",			-- 11	30	HouseBank5
-	"Storage Chest, <2>",			-- 12	60	HouseBank6
-	"Storage Chest, <3>",			-- 13	60	HouseBank7
+	"Storage Chest, Oaken",			-- 12	60	HouseBank6
+	"Storage Chest, Secure",		-- 13	60	HouseBank7
 	"Storage Chest, <4>",			-- 14	60	HouseBank8
 	"UNKNOWN1",					    -- 15	0
 	"UNKNOWN2",						-- 16	0

@@ -196,47 +196,43 @@ local function isALTCraftMat(link, t)
 	return false
 end
 
-local function getALTCraftRank(craft)
-	-- return the currentALTCraft rank for craft
-	return CJRAB.ALTCraftRank[craft]
-end
-
-
-local function cmpALTCraftRank(link, t)
-	-- Compare the Equip craft mat (type t) to current ALT craft rank
-	-- Return < 0 if item is under ALT crafter rank, > 0  if item is over, 
-	-- and 0 if item is at ALT crafter rank.
+local function getCraftRank(link, t)
+	-- Return the craft rank of link (type t)
 	-- Return nil if item is not an ALTCraftMat.
-
 	if not isALTCraftMat(link, t) then return nil end
 	local craft = GetItemLinkCraftingSkillType(link)
 	if craft == 0 or craft == nil then return nil end
 	local skillRank = GetItemLinkRequiredCraftingSkillRank(link)
 	if skillRank == 0 or skillRank == nil then return nil end
-	local crafterRank = getALTCraftRank(craft)
-	return skillRank - crafterRank
+	return skillRank
 end
 
-
-
-local function isOverALTCraftRank(link, t)
-	local ret = cmpALTCraftRank(link, t)
-	if ret ~= nil and ret > 0 then return true end
-	return false
+local function isAtLeastCraftRank(rankArray, link, t)
+	-- Return true if (link,t) is an ALTCraftMat over the rank given in
+	-- 'rankArray' which is an array of CraftSkill ranks.
+	local rank = getCraftRank(link, t)
+	if rank == nil then return false end
+	local craft = GetItemLinkCraftingSkillType(link)
+	if rank >= rankArray[craft] then return true else return false end
 end
 
-local function isUnderALTCraftRank(link, t)
-	local ret = cmpALTCraftRank(link, t)
-	if ret ~= nil and ret < 0 then return true end
-	return false
+local function isUnderCraftRank(rankArray, link, t)
+	-- Return true if (link,t) is an ALTCraftMat under the rank given in
+	-- 'rankArray' which is an array of CraftSkill ranks.
+	local rank = getCraftRank(link, t)
+	if rank == nil then return false end
+	local craft = GetItemLinkCraftingSkillType(link)
+	if rank < rankArray[craft] then return true else return false end
 end
 
-local function isEqualALTCraftRank(link, t)
-	local ret = cmpALTCraftRank(link, t)
-	if ret ~= nil and ret == 0 then return true end
-	return false
+local function isEqualCraftRank(rankArray, link, t)
+	-- Return true if (link,t) is an ALTCraftMat equal to the rank given in
+	-- 'rankArray' which is an array of CraftSkill ranks.
+	local rank = getCraftRank(link, t)
+	if rank == nil then return false end
+	local craft = GetItemLinkCraftingSkillType(link)
+	if rank == rankArray[craft] then return true else return false end
 end
-
 
 
 
@@ -503,8 +499,11 @@ local function isInCharHoard(char, player, cbag, slot)
 			HoardReason = "furnishing mats"
 			return true
 		end
-		-- Writ Craft mats over ALT writ crafting level
-		if	quality <= QUALITY_SUPERIOR and isOverALTCraftRank(link, t) then
+		-- current and future craft mats
+		if	quality <= QUALITY_SUPERIOR and
+					isAtLeastCraftRank(CJRAB.CrafterRank, link, t) and
+					not isEqualCraftRank(CJRAB.ALTCraftRank, link, t)  and
+					not is_writ(cbag,slot) then
 			HoardReason = "crafting mats (non epic)"
 			return true
 		end
@@ -632,8 +631,10 @@ local function isInCharHoard(char, player, cbag, slot)
 	end
 
 	if char == CJRAB.ROLE_LOWMATS then
-		-- out-leveled Equip crafting mats (manually deposited)
-		if quality < QUALITY_FINE and isUnderALTCraftRank(link, t) then
+		-- out-leveled Equip crafting mats
+		if quality < QUALITY_FINE and
+					isUnderCraftRank(CJRAB.CrafterRank, link, t) and
+					not isEqualCraftRank(CJRAB.ALTCraftRank, link, t) then
 			HoardReason = "outleveled mat hoard"
 			return true
 		end
@@ -711,13 +712,15 @@ local function isInBankHoard(bankBag, cbag, slot)
 		end
 
 		-- Equip Writ mats for current ALT rank
-		if quality < QUALITY_FINE and isEqualALTCraftRank(link, t) then
-			HoardReason = "current writ mats"
+		if quality < QUALITY_FINE and
+					isEqualCraftRank(CJRAB.ALTCraftRank, link, t) then
+			HoardReason = "current ALT writ mats"
 			return true
 		end
 
 		-- Alchemy and Provisioning Writ mats (manually marked)
 		if isAlchemy(t) or
+					t == ITEMTYPE_POTION_BASE or
 					t == ITEMTYPE_POTION or
 					t == ITEMTYPE_INGREDIENT or
 					t == ITEMTYPE_FOOD or

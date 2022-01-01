@@ -35,22 +35,45 @@ CJRAB.CharsEnabled = {
 }
 
 --=============================================================================
--- Config for current state 
+-- Config for current state
 
 -- Set to true if you own Summerset (Jewelcrafting)
 CJRAB.HasJewelcrafting = true
 
--- current crafting ranks for all alts
--- NB: they must rank-up in lock-step for a given craft
-CJRAB.ALTCraftRank = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= 5,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= 5,		-- 2
+-- Current CRAFTER Crafting Ranks:
+-- Raw mats at this level and above will stay on the ROLE_CRAFTER;
+-- mats below this level will be sent to LOWMATS except for
+-- mats at ALTCraftRank which stay in the bank.
+-- Best way to proceed is to rank-up your main (crafter) as soon as you
+-- start getting nodes for the next tier.
+-- Since 50% of nodes are based on your level and 50% are based on your rank,
+-- this ensures that you are only ever collecting one type of node mat.
+-- Wait with your ALTs until they run out of writ mats for the previous rank
+-- and then rank-up all ALTs together, and update their rank below.
+CJRAB.CrafterRank = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= 8,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 8,		-- 2
 	[CRAFTING_TYPE_ENCHANTING]			= 6,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 4,		-- 4
 	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
-	[CRAFTING_TYPE_WOODWORKING]			= 5,		-- 6
+	[CRAFTING_TYPE_WOODWORKING]			= 8,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
 }
+
+-- Current ALT Crafting Ranks
+-- NB: for all alts; they should rank-up in lock-step for a given craft.
+-- mats < these ranks will be sent to
+CJRAB.ALTCraftRank = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= 1,		-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 1,		-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= 6,		-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 5,		-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= 1,		-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
+}
+-- Enchanting Hirelings: Kj,Cw,By,Ce
+
 
 -- Crafting mat distribution
 -- If true, distribute low quality (< green) craft mats to the
@@ -79,17 +102,20 @@ CJRAB.CharSurveys = {
 		"Glenumbra",
 		"Stormhaven",
 		"Rivenspire",
+
 --		"Coldharbour",
+--		"Vvardenfell",
 --		"Blackwood",
 		},
 	[C_Calliope]		= {},
-	[C_Buffy]			= {},
+	[C_Buffy]			= {
+		"Alchemist",
+	},
 	[C_Gareth]			= {},
 	[C_Freddy]			= {},
 	[C_Kelvin]			= {
-		"Alchemist",
-		"Enchanter",
 		"Jewelry",
+		"Enchanter",
 	},
 }
 
