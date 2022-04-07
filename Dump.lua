@@ -100,6 +100,8 @@ function CJRAB.DumpSlot(bag, slot)
 
 	msg = msg .. " qual=" .. dstr('SI_ITEMQUALITY', quality)
 	msg = msg .. " lvl=" ..  GetItemLevel(bag, slot)
+	msg = msg .. " reqlvl=" ..  GetItemRequiredLevel(bag, slot)
+	msg = msg .. " reqCP=" ..  GetItemRequiredChampionPoints(bag, slot)
 	if style > 0 then
 		msg = msg .. string.format(" style=%d:%s", style,
 					GetItemStyleName(style))

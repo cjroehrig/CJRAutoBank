@@ -125,6 +125,20 @@ local function isCosmetic(link, t)
 end
 
 --=====================================
+local function isFragment(link, t, st)
+	if	st == SPECIALIZED_ITEMTYPE_TROPHY_COLLECTIBLE_FRAGMENT or
+		st == SPECIALIZED_ITEMTYPE_TROPHY_KEY_FRAGMENT or
+		st == SPECIALIZED_ITEMTYPE_TROPHY_RECIPE_FRAGMENT or
+		st == SPECIALIZED_ITEMTYPE_TROPHY_RUNEBOX_FRAGMENT or
+		st == SPECIALIZED_ITEMTYPE_RUNEBOX_UPGRADE_FRAGMENT then
+		return true
+	end
+	return false
+end
+
+
+
+--=====================================
 local function isArchiveType(link, t)
 	-- Return True if this is a Archive type item where 
 	-- the RESERVED mark means to archive it.
@@ -183,6 +197,7 @@ local function isEquipMat(t)
 	end
 	return false
 end
+
 
 
 --=============================================================================
@@ -358,6 +373,11 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 		(CJRAB.HasJewelcrafting and  isJewelry(link,t)) then
 		local craft = GetItemLinkCraftingSkillType(link)
 
+		if craft == CRAFTING_TYPE_INVALID then
+			-- some Miscellaneous clothing has no craft type
+			return false
+		end
+
 		if isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
 			return false
 		end
@@ -366,11 +386,17 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 			not isGlyph(link, t) and quality > QUALITY_NORMAL then
 			-- don't get rare mats from low-level alts; send to crafter instead
 			if char == CJRAB.ROLE_CRAFTER then
-				HoardReason = "for mats deconstruction"
-				if CountCharDC and char == PlayerChar then
-					DeconstructItems[craft] = DeconstructItems[craft] + 1
+				-- don't DC any epic CP160 gear?
+				if not CJRAB.BankCP160Gear or
+							quality < QUALITY_EPIC or
+							GetItemLinkRequiredChampionPoints(link) < 160 then
+					HoardReason = "for mats deconstruction"
+					if CountCharDC and char == PlayerChar then
+						DeconstructItems[craft] = DeconstructItems[craft] + 1
+						Dbg("isForDeconstruction(mats): %s", cbag:ItemName(slot))
+					end
+					return true
 				end
-				return true
 			end
 		else
 			if CJRAB.ALTCraftDistribute[craft] then
@@ -379,6 +405,7 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 					HoardReason = "for ALT XP deconstruction"
 					if CountCharDC and char == PlayerChar then
 						DeconstructItems[craft] = DeconstructItems[craft] + 1
+						Dbg("isForDeconstruction(ALT XP): %s", cbag:ItemName(slot))
 					end
 					return true
 				end
@@ -386,6 +413,7 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 				HoardReason = "for CRAFTER XP deconstruction"
 				if CountCharDC and char == PlayerChar then
 					DeconstructItems[craft] = DeconstructItems[craft] + 1
+						Dbg("isForDeconstruction(CRAFTER XP): %s", cbag:ItemName(slot))
 				end
 				return true
 			end
@@ -398,6 +426,40 @@ end
 --=============================================================================
 -- HOARD DEFINITIONS
 
+--=====================================
+local function isCharSurvey(char, name)
+	-- Return true of the item name is one of this character's
+	-- designated Survey or Treasure Map items.
+	-- NB: ROLE_QUEST has precedence in case of multiple matches.
+
+	-- is char the quester?
+	if char ~= CJRAB.ROLE_QUESTER then
+		-- No, so first check if the quester wants it...
+		for _, pat in ipairs(CJRAB.CharSurveys[CJRAB.ROLE_QUESTER]) do
+			if name:find(pat) then
+				-- quester wants it; let them have it.
+				-- XXX: skip Jewelry Surveys for now (until we level it)
+				if not name:find('Jewelry') then
+					return false
+				end
+			end
+		end
+	end
+
+	-- see if we want it
+	for _, pat in ipairs(CJRAB.CharSurveys[char]) do
+		if name:find(pat) then
+			--  XXX: skip Jewelry Surveys
+			if char == CJRAB.ROLE_QUESTER then
+				if name:find('Jewelry') then
+					return false
+				end
+			end
+			return true
+		end
+	end
+	return false
+end
 
 --=====================================
 local function isInCharHoard(char, player, cbag, slot)
@@ -432,20 +494,16 @@ local function isInCharHoard(char, player, cbag, slot)
 
 	-- surveys for this char
 	if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
-		for _, pat in ipairs(CJRAB.CharSurveys[char]) do
-			if name:find(pat) then
-				HoardReason = CJRAB.CharName(char) .. "'s survey hoard"
-				return true
-			end
+		if isCharSurvey(char, name) then
+			HoardReason = CJRAB.CharName(char) .. "'s survey hoard"
+			return true
 		end
 	end
 	-- treasure maps for this char
 	if st == SPECIALIZED_ITEMTYPE_TROPHY_TREASURE_MAP then
-		for _, pat in ipairs(CJRAB.CharSurveys[char]) do
-			if name:find(pat) then
-				HoardReason = CJRAB.CharName(char) .. "'s treasure map hoard"
-				return true
-			end
+		if isCharSurvey(char, name) then
+			HoardReason = CJRAB.CharName(char) .. "'s treasure map hoard"
+			return true
 		end
 	end
 
@@ -517,9 +575,20 @@ local function isInCharHoard(char, player, cbag, slot)
 			HoardReason = "raw mats"
 			return true
 		end
+
 	end
 
-	if char == CJRAB.ROLE_REASEARCH and not CJRAB.ResearchablesInBank then
+	if char == CJRAB.ROLE_COLLECTOR then
+		if isFragment(link, t, st) then
+			HoardReason = "collectible fragment"
+		end
+
+		-- if st == SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then
+		-- nothing; per-account.  Just use them or discard... manually junk?
+	end
+
+
+	if char == CJRAB.ROLE_RESEARCH and not CJRAB.ResearchablesInBank then
 		if isUnresearchedTraitItem(char, link, t) then
 			HoardReason = "to research"
 			return true
@@ -687,10 +756,6 @@ local function isInBankHoard(bankBag, cbag, slot)
 			return true
 		end
 
-		-- if st == SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then
-		-- nothing; per-account.  Just use them or discard... manually junk?
-
-
 		if	t == ITEMTYPE_RACIAL_STYLE_MOTIF then
 			HoardReason = "style motif for any takers"
 			return true
@@ -740,8 +805,17 @@ local function isInBankHoard(bankBag, cbag, slot)
 				" to research [banked]"
 			return true
 		end
-	end
 
+		-- Save any (unequipped) CP160 >=epic gear in the bank
+		if		CJRAB.BankCP160Gear and
+			   (isArmor(link, t) or isWeapon(link, t) or isJewelry(link, t)) and
+				quality >= QUALITY_EPIC and
+				GetItemLinkRequiredChampionPoints(link) >= 160 then
+			HoardReason = "epic CP160 gear for any takers"
+			return true
+		end
+
+	end
 	return false
 end
 

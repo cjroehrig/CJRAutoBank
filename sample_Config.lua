@@ -51,13 +51,26 @@ CJRAB.HasJewelcrafting = true
 -- Wait with your ALTs until they run out of writ mats for the previous rank
 -- and then rank-up all ALTs together, and update their rank below.
 CJRAB.CrafterRank = {
-	[CRAFTING_TYPE_BLACKSMITHING]		= 8,		-- 1
-	[CRAFTING_TYPE_CLOTHIER]			= 8,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 6,		-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= 4,		-- 4
-	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
-	[CRAFTING_TYPE_WOODWORKING]			= 8,		-- 6
+	[CRAFTING_TYPE_BLACKSMITHING]		= 10,		-- 1
+		-- Keen Eye 1
+		-- Extraction 3
+		-- Research 3
+	[CRAFTING_TYPE_CLOTHIER]			= 10,		-- 2
+		-- Keen Eye 1
+		-- Extraction 3
+		-- Research 3
+	[CRAFTING_TYPE_ENCHANTING]			= 9,		-- 3
+		-- Improvement 2
+	[CRAFTING_TYPE_ALCHEMY]				= 6,		-- 4
+		-- Keen Eye 1
+	[CRAFTING_TYPE_PROVISIONING]		= 5,		-- 5
+		-- Quality 4
+	[CRAFTING_TYPE_WOODWORKING]			= 10,		-- 6
+		-- Keen Eye 1
+		-- Extraction 3
+		-- Research 1
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
+		-- Extraction 1
 }
 
 -- Current ALT Crafting Ranks
@@ -66,9 +79,9 @@ CJRAB.CrafterRank = {
 CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 1,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 1,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 6,		-- 3
-	[CRAFTING_TYPE_ALCHEMY]				= 5,		-- 4
-	[CRAFTING_TYPE_PROVISIONING]		= 4,		-- 5
+	[CRAFTING_TYPE_ENCHANTING]			= 9,		-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 6,		-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= 5,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 1,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
 }
@@ -93,6 +106,7 @@ CJRAB.ALTCraftDistribute = {
 CJRAB.DistribRawMats					= true
 
 -- patterns for which characters take surveys and treasure maps:
+-- NB: ROLE_QUESTER character has precedence.
 CJRAB.CharSurveys = {
 	[C_Charlotte]		= {
 		"Stros M'Kai",
@@ -102,6 +116,7 @@ CJRAB.CharSurveys = {
 		"Glenumbra",
 		"Stormhaven",
 		"Rivenspire",
+		"Alik",
 
 --		"Coldharbour",
 --		"Vvardenfell",
@@ -135,6 +150,9 @@ CJRAB.WritStyleMatsInBank = true
 -- (NB: this only applies to items without researchable traits for the
 -- ROLE_RESEARCH toon [requires the CraftStore addon])
 CJRAB.CrafterQualityDC = true
+
+-- Bank any CP160 Epic+ gear instead of sending it for DC
+CJRAB.BankCP160Gear = true
 
 -- store researchable items (for the ROLE_RESEARCH toon) in the bank instead
 -- of sending them to that toon.
@@ -170,6 +188,7 @@ CJRAB.ROLE_ALCHEMY		= C_MAIN		-- alchemy hoard
 CJRAB.ROLE_RECIPE		= C_MAIN		-- learns all unknown recipes
 CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
+CJRAB.ROLE_COLLECTOR	= C_MAIN		-- collector of trophies, fragments, etc
 
 CJRAB.ROLE_ENCHANT		= nil			-- enchant mats go to bank
 

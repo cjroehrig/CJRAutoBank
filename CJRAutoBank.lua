@@ -224,7 +224,7 @@ end
 --=====================================
 function CJRAB.LogSlotUpdate(bag, slot, isNew, change)
 	-- Log a slot change message
-	local msg
+	local msg, stack
 
 	if change < 0 then
 		-- no info available for items removed :(
@@ -247,13 +247,14 @@ function CJRAB.LogSlotUpdate(bag, slot, isNew, change)
 			if change > 1 then
 				msg = msg .. " " .. tostring(change)
 			end
+			msg = msg .. " " .. CJRAB.ItemName(bag, slot)
+			stack = GetSlotStackSize(bag, slot)
+			if stack > change then
+				msg = msg .. string.format(" (stack: %d)", stack)
+			end
 		else
-			msg = "changed"
+			msg = "changed " .. CJRAB.ItemName(bag, slot)
 		end
-		msg = string.format("%s %s (total: %d)",
-			msg,
-			CJRAB.ItemName(bag, slot),
-			GetSlotStackSize(bag, slot))
 	end
 	d(string.format("%s: %s", CJRAB.BagName(bag), msg))
 end
