@@ -125,13 +125,19 @@ local function isCosmetic(link, t)
 end
 
 --=====================================
-local function isFragment(link, t, st)
+local function isCollectible(link, t, st)
 	if	st == SPECIALIZED_ITEMTYPE_TROPHY_COLLECTIBLE_FRAGMENT or
 		st == SPECIALIZED_ITEMTYPE_TROPHY_KEY_FRAGMENT or
 		st == SPECIALIZED_ITEMTYPE_TROPHY_RECIPE_FRAGMENT or
 		st == SPECIALIZED_ITEMTYPE_TROPHY_RUNEBOX_FRAGMENT or
 		st == SPECIALIZED_ITEMTYPE_RUNEBOX_UPGRADE_FRAGMENT then
 		return true
+	end
+	if t == ITEMTYPE_COLLECTIBLE then
+		--Dbg("isCollectible(%s,%d,%d) ==", CJRAB.ItemLinkName(link), t, st)
+		if	st == SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then
+			return true
+		end
 	end
 	return false
 end
@@ -579,8 +585,9 @@ local function isInCharHoard(char, player, cbag, slot)
 	end
 
 	if char == CJRAB.ROLE_COLLECTOR then
-		if isFragment(link, t, st) then
-			HoardReason = "collectible fragment"
+		if isCollectible(link, t, st) then
+			HoardReason = "collectible"
+			return true
 		end
 
 		-- if st == SPECIALIZED_ITEMTYPE_COLLECTIBLE_STYLE_PAGE then
