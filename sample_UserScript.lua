@@ -139,6 +139,12 @@ local function isCollectible(link, t, st)
 			return true
 		end
 	end
+
+	local name = GetItemLinkName(link)
+	if name:find('Aurora Firepot Spider') then
+		return true
+	end
+
 	return false
 end
 
@@ -185,6 +191,7 @@ local function isRawMat(t)
 	if t == ITEMTYPE_BLACKSMITHING_RAW_MATERIAL	then return true end
 	if t == ITEMTYPE_CLOTHIER_RAW_MATERIAL		then return true end
 	if t == ITEMTYPE_WOODWORKING_RAW_MATERIAL	then return true end
+	if t == ITEMTYPE_RAW_MATERIAL				then return true end
 	if CJRAB.HasJewelcrafting then
 		-- only keep jewelcrafting mats if we have Jewelcrafting
 		if t == ITEMTYPE_JEWELRYCRAFTING_RAW_MATERIAL	then return true end
