@@ -926,7 +926,9 @@ local function withdrawCurrency(char, curt, reserve)
 		dst = CURRENCY_LOCATION_CHARACTER
 		Msg("Withdrawing %d %s", amount, 
 			CJRAB.GetString('CJRAB_SI_CURRENCY', curt))
-		TransferCurrency( curt, amount, src, dst)
+		if not CJRAB.DryRun then
+			TransferCurrency( curt, amount, src, dst)
+		end
 	end
 end
 
@@ -940,7 +942,9 @@ local function depositCurrency(char, curt, reserve)
 		dst = CURRENCY_LOCATION_BANK
 		Msg("Depositing %d %s", amount,
 			CJRAB.GetString('CJRAB_SI_CURRENCY', curt))
-		TransferCurrency( curt, amount, src, dst)
+		if not CJRAB.DryRun then
+			TransferCurrency( curt, amount, src, dst)
+		end
 	end
 end
 
