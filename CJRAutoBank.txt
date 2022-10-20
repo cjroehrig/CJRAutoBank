@@ -2,7 +2,7 @@
 ## Author: croehrig
 ## Description: User-scriptable auto-banking
 ## Version: 1.2
-## APIVersion: 101033
+## APIVersion: 101034
 ## DependsOn: 
 
 Config.lua

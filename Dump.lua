@@ -168,6 +168,12 @@ function CJRAB.DumpSlot(bag, slot)
 		msg = msg .. " STORE"
 	end
 
+	-- https://esoapi.uesp.net/current/src/ingame/inventory/inventoryslot.lua.html#382
+	if (GetItemActorCategory(bag, slot) 
+						== GAMEPLAY_ACTOR_CATEGORY_COMPANION) then
+		msg = msg .. " COMPANION"
+	end
+
 	-- Defunct; not useful
 --	msg = msg .. " mlvl=" ..  GetItemLinkMaterialLevelDescription(link)
 
