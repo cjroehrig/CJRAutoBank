@@ -391,6 +391,12 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 			return false
 		end
 
+		-- companion items can't be deconstructed
+		if (GetItemLinkActorCategory(link) 
+						== GAMEPLAY_ACTOR_CATEGORY_COMPANION) then
+			return false
+		end
+
 		if isUnresearchedTraitItem(CJRAB.ROLE_RESEARCH, link, t) then
 			return false
 		end
@@ -885,6 +891,12 @@ local function isCraftBaggable(item)
 end
 
 --=====================================
+local function CJRHasCraftBagAccess()
+	if not CJRAB.EnableCraftBag then return false end
+	return HasCraftBagAccess()
+end
+
+--=====================================
 local function withdrawHoardables( char, bankBag )
 	local str, count
 	local bbag = CJRAB.TransferBags[bankBag]
@@ -892,7 +904,8 @@ local function withdrawHoardables( char, bankBag )
 		HoardReason = ""
 		if isInCharHoard(char, char, bbag, slot) then
 			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
-		elseif HasCraftBagAccess() and isCraftBaggable(bbag:GetItem(slot)) then
+		elseif CJRHasCraftBagAccess() and 
+									isCraftBaggable(bbag:GetItem(slot)) then
 			HoardReason = "for CraftBag"
 			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
 		end
@@ -903,7 +916,7 @@ end
 local function depositCraftBag( char )
 	local str, count
 	local cbag = CJRAB.TransferBags[BAG_BACKPACK]
-	if not HasCraftBagAccess() then return end
+	if not CJRHasCraftBagAccess() then return end
 
 	for slot in cbag:Items() do
 		if isCraftBaggable(cbag:GetItem(slot)) then

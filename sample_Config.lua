@@ -158,6 +158,11 @@ CJRAB.BankCP160Gear = true
 -- of sending them to that toon.
 CJRAB.ResearchablesInBank = true
 
+-- This enables moving of craft-baggable items into the CraftBag.
+-- Not necessary since there is an in-game "Auto-add" Gameplay Setting.
+-- NB: enabling this will deposit and destroy the "Gemmable" state of items.
+CJRAB.EnableCraftBag =false
+
 --=============================================================================
 -- FCO ItemSaver Dynamic Icons
 
