@@ -41,6 +41,7 @@ CJRAB.CharsEnabled = {
 CJRAB.HasJewelcrafting = true
 
 -- Current CRAFTER Crafting Ranks:
+-- NB: Rank is the level of the primary ability for that Craft
 -- Raw mats at this level and above will stay on the ROLE_CRAFTER;
 -- mats below this level will be sent to LOWMATS except for
 -- mats at ALTCraftRank which stay in the bank.
@@ -54,44 +55,57 @@ CJRAB.CrafterRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 10,		-- 1
 		-- Keen Eye 1
 		-- Extraction 3
-		-- Research 3
+		-- Research 0
+		-- Expertise 0
 	[CRAFTING_TYPE_CLOTHIER]			= 10,		-- 2
 		-- Keen Eye 1
 		-- Extraction 3
-		-- Research 3
-	[CRAFTING_TYPE_ENCHANTING]			= 9,		-- 3
-		-- Improvement 2
-	[CRAFTING_TYPE_ALCHEMY]				= 6,		-- 4
+		-- Research 0
+		-- Expertise 0
+	[CRAFTING_TYPE_ENCHANTING]			= 10,		-- 3
+		-- Improvement 4
+	[CRAFTING_TYPE_ALCHEMY]				= 7,		-- 4
 		-- Keen Eye 1
-	[CRAFTING_TYPE_PROVISIONING]		= 5,		-- 5
+	[CRAFTING_TYPE_PROVISIONING]		= 6,		-- 5
 		-- Quality 4
 	[CRAFTING_TYPE_WOODWORKING]			= 10,		-- 6
 		-- Keen Eye 1
 		-- Extraction 3
-		-- Research 1
-	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
-		-- Extraction 1
+		-- Research 0
+		-- Expertise 0
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 5,		-- 7
+		-- Keen Eye 1
+		-- Extraction 3
+		-- Research 0
+		-- Expertise 0
 }
 
 -- Current ALT Crafting Ranks
 -- NB: for all alts; they should rank-up in lock-step for a given craft.
--- mats < these ranks will be sent to
+-- mats < these ranks will be sent to ROLE_LOWMATS
+-- NB: numbers here are the ones displayed for the proficiency ability
 CJRAB.ALTCraftRank = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= 1,		-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= 1,		-- 2
-	[CRAFTING_TYPE_ENCHANTING]			= 9,		-- 3
+	[CRAFTING_TYPE_ENCHANTING]			= 10,		-- 3
 	[CRAFTING_TYPE_ALCHEMY]				= 6,		-- 4
-	[CRAFTING_TYPE_PROVISIONING]		= 5,		-- 5
+		-- NB: keep here at 6 so Cloud Mist stays in bank; ALTs are really 7/8
+	[CRAFTING_TYPE_PROVISIONING]		= 6,		-- 5
 	[CRAFTING_TYPE_WOODWORKING]			= 1,		-- 6
 	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,		-- 7
 }
--- Enchanting Hirelings: Kj,Cw,By,Ce
+-- Enchanting Hirelings3: By,Cw,Kj
+-- Chef/Brewer3: Fj
+
+-- XXX: ALT 2024Aug30 SAVED: ENCHANTING=9, ALC=6?, Prov=5,JC=2, *=1
+-- XXX: ALT 2024Oct10 SAVED: ENCHANTING=10, ALC=7, Prov=2,JC=2, *=1
+-- XXX: ALT 2024Nov20 SAVED: ENCHANTING=10, ALC=7, Prov=2,JC=1, *=1
 
 
--- Crafting mat distribution
--- If true, distribute low quality (< green) craft mats to the
+-- Crafting deconstruct (DC) distribution: If true, distribute DC items to the
 -- lowest-ranked ALT; otherwise always send them to ROLE_CRAFTER.
 -- (unresearched items always go to ROLE_RESEARCH).
+-- (Also see CJRAB.CrafterQualityDC below).
 CJRAB.ALTCraftDistribute = {
 	[CRAFTING_TYPE_BLACKSMITHING]		= true,			-- 1
 	[CRAFTING_TYPE_CLOTHIER]			= true,			-- 2
@@ -106,21 +120,35 @@ CJRAB.ALTCraftDistribute = {
 CJRAB.DistribRawMats					= true
 
 -- patterns for which characters take surveys and treasure maps:
+-- NB: These override ROLE_SURVEYS
 -- NB: ROLE_QUESTER character has precedence.
 CJRAB.CharSurveys = {
 	[C_Charlotte]		= {
+		----- Daggerfall Covenant
 		"Stros M'Kai",
 		"Betnikh",
-		"Bleakrock",
-		"Bal Foyen",
 		"Glenumbra",
 		"Stormhaven",
 		"Rivenspire",
 		"Alik",
-
---		"Coldharbour",
---		"Vvardenfell",
---		"Blackwood",
+		"Bangkorai",
+		----- Alteri Dominion
+		"Khenarthi's Roost",			-- XXX: TEMP?  Just the CE?
+		"Auridon",
+		"Grahtwood",
+		"Greenshade",
+		"Malabal",
+		"Reaper",
+		----- Ebonhart Pact
+--		"Bleakrock",
+--		"Bal Foyen",
+		----- Common & DLC
+		"Coldharbour",
+		"Craglorn",
+		"Hew's Bane",
+		"Gold Coast",
+		"Dominion",				-- TEMP: reward treasure map coffer
+		"Pact",					-- TEMP: reward treasure map coffer
 		},
 	[C_Calliope]		= {},
 	[C_Buffy]			= {
@@ -146,22 +174,18 @@ CJRAB.WritStyleMatsInBank = true
 -- If all toons have equal rank and chance at DCing for quality mats, then set
 -- to false and quality items will be sent to the toon of lowest craft level.
 -- Otherwise (e.g. if your CRAFTER has Extraction skills), set to true to
--- send all "quality" (>= green) items to ROLE_CRAFTER for deconstruction.
+-- send all "quality" (> green/FINE) items to ROLE_CRAFTER for deconstruction.
 -- (NB: this only applies to items without researchable traits for the
 -- ROLE_RESEARCH toon [requires the CraftStore addon])
 CJRAB.CrafterQualityDC = true
 
 -- Bank any CP160 Epic+ gear instead of sending it for DC
-CJRAB.BankCP160Gear = true
+CJRAB.BankCP160Gear = false
 
 -- store researchable items (for the ROLE_RESEARCH toon) in the bank instead
 -- of sending them to that toon.
 CJRAB.ResearchablesInBank = true
 
--- This enables moving of craft-baggable items into the CraftBag.
--- Not necessary since there is an in-game "Auto-add" Gameplay Setting.
--- NB: enabling this will deposit and destroy the "Gemmable" state of items.
-CJRAB.EnableCraftBag =false
 
 --=============================================================================
 -- FCO ItemSaver Dynamic Icons
@@ -189,20 +213,42 @@ CJRAB.ROLE_CRAFTER		= C_MAIN		-- crafting mats, some style mats
 CJRAB.ROLE_RESEARCH		= C_MAIN		-- who is doing crafting research
 CJRAB.ROLE_MONEY		= C_MAIN		-- hoards (most of) the money
 CJRAB.ROLE_LURE			= C_MAIN		-- fishing lures
-CJRAB.ROLE_ALCHEMY		= C_MAIN		-- alchemy hoard
 CJRAB.ROLE_RECIPE		= C_MAIN		-- learns all unknown recipes
 CJRAB.ROLE_FURNISHING	= C_MAIN		-- furnishings hoard
 CJRAB.ROLE_SOULGEM		= C_MAIN		-- empty soul gem filler
 CJRAB.ROLE_COLLECTOR	= C_MAIN		-- collector of trophies, fragments, etc
 
-CJRAB.ROLE_ENCHANT		= nil			-- enchant mats go to bank
+CJRAB.ROLE_ALCHEMY		= nil			-- alchemy hoard (bank)
+CJRAB.ROLE_ENCHANT		= nil			-- enchant hoard (bank)
 
 CJRAB.ROLE_ARCHIVE		= C_Calliope	-- Archived items (marked with reserve)
 CJRAB.ROLE_STYLES		= C_Buffy		-- (non-writ) style mats
-CJRAB.ROLE_COSTUMES		= C_Buffy		-- costumes, disguises, clothes
+CJRAB.ROLE_COSTUMES		= C_Freddy		-- costumes, disguises, clothes
 CJRAB.ROLE_TRAITS		= C_Buffy		-- trait mats
 CJRAB.ROLE_SURVEYS		= C_Gareth		-- surveys/maps for non-current zones
 CJRAB.ROLE_CROWN		= C_Calliope	-- crown items
-CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
+
+--CJRAB.ROLE_EPIC			= C_Freddy		-- epic/rare mats
+CJRAB.ROLE_EPIC			= nil		-- epic/rare mats go to bank
+
 CJRAB.ROLE_INGREDIENTS	= C_Freddy		-- unused food/drink ingredients hoard
 CJRAB.ROLE_LOWMATS		= C_Kelvin		-- outleveled crafting mats
+
+-- OVERFLOW ROLES (more than BANK_STACKLIMIT in bank)
+CJRAB.ROLE_OVRFLW_BLACKSMITHING		= C_Freddy
+CJRAB.ROLE_OVRFLW_CLOTHIER			= C_Calliope
+CJRAB.ROLE_OVRFLW_ENCHANTING		= C_Kelvin
+CJRAB.ROLE_OVRFLW_ALCHEMY			= C_Kelvin
+CJRAB.ROLE_OVRFLW_PROVISIONING		= C_Kelvin
+CJRAB.ROLE_OVRFLW_WOODWORKING		= C_Gareth
+CJRAB.ROLE_OVRFLW_JEWELRYCRAFTING	= C_Freddy
+-- Maximum number of full stacks to keep in bank before OVRFLW
+CJRAB.BANK_STACKLIMIT = {
+	[CRAFTING_TYPE_BLACKSMITHING]		= 1,			-- 1
+	[CRAFTING_TYPE_CLOTHIER]			= 1,			-- 2
+	[CRAFTING_TYPE_ENCHANTING]			= 1,			-- 3
+	[CRAFTING_TYPE_ALCHEMY]				= 1,			-- 4
+	[CRAFTING_TYPE_PROVISIONING]		= 1,			-- 5
+	[CRAFTING_TYPE_WOODWORKING]			= 1,			-- 6
+	[CRAFTING_TYPE_JEWELRYCRAFTING]		= 1,			-- 7
+}

@@ -20,6 +20,7 @@ local DeconstructItems = {				-- indexed by TradeskillType
     [CRAFTING_TYPE_PROVISIONING]        = 0,        -- 5
     [CRAFTING_TYPE_WOODWORKING]         = 0,        -- 6
     [CRAFTING_TYPE_JEWELRYCRAFTING]     = 0,        -- 7
+--  [CRAFTING_TYPE_SCRIBING]     		= 0,        -- 8
 }
 
 
@@ -28,12 +29,12 @@ local DeconstructItems = {				-- indexed by TradeskillType
 
 --=====================================
 -- ESO ITEM_QUALITY constants have weird names; use the current ones
-local QUALITY_WORN					= ITEM_QUALITY_TRASH		-- 0
-local QUALITY_NORMAL				= ITEM_QUALITY_NORMAL		-- 1
-local QUALITY_FINE					= ITEM_QUALITY_MAGIC		-- 2
-local QUALITY_SUPERIOR				= ITEM_QUALITY_ARCANE		-- 3
-local QUALITY_EPIC					= ITEM_QUALITY_ARTIFACT		-- 4
-local QUALITY_LEGENDARY				= ITEM_QUALITY_LEGENDARY	-- 5
+local QUALITY_WORN					= ITEM_QUALITY_TRASH		-- 0 Grey
+local QUALITY_NORMAL				= ITEM_QUALITY_NORMAL		-- 1 White
+local QUALITY_FINE					= ITEM_QUALITY_MAGIC		-- 2 Green
+local QUALITY_SUPERIOR				= ITEM_QUALITY_ARCANE		-- 3 Blue
+local QUALITY_EPIC					= ITEM_QUALITY_ARTIFACT		-- 4 Purple
+local QUALITY_LEGENDARY				= ITEM_QUALITY_LEGENDARY	-- 5 Gold
 
 
 --=====================================
@@ -44,6 +45,7 @@ local ITEMID_MALACHITE_SHARD				= 0xfcb2
 local ITEMID_CROWN_POISON					= 0x1374a
 local ITEMID_CROWN_POTION					= 0xfcc6	
 local ITEMID_COUNTERFEIT_PARDON_EDICT		= 0x11863
+local ITEMID_LENIENCY_EDICT					= 0x1201a
 
 --=============================================================================
 -- Other AddOn interfaces
@@ -51,11 +53,28 @@ local ITEMID_COUNTERFEIT_PARDON_EDICT		= 0x11863
 --=====================================
 local CS = CraftStoreFixedAndImprovedLongClassName
 
+-- These operate on CloneBags
 local is_reserved = function(cbag, slot)
 	return cbag:IsFCOMarked(slot, CJRAB.FCO_ICON_RESERVED)
 end
 local is_writ = function(cbag, slot)
 	return cbag:IsFCOMarked(slot, CJRAB.FCO_ICON_WRITMATS )
+end
+
+-- These operate directly on the raw bag
+local raw_is_reserved = function(bag, slot)
+	if FCOIS then
+		return FCOIS.IsMarked(bag, slot, CJRAB.FCO_ICON_RESERVED )
+	else
+		return false
+	end
+end
+local raw_is_writ = function(bag, slot)
+	if FCOIS then
+		return FCOIS.IsMarked(bag, slot, CJRAB.FCO_ICON_WRITMATS )
+	else
+		return false
+	end
 end
 
 
@@ -76,9 +95,7 @@ end
 
 --=====================================
 local function isAlchemy(t)
-
--- Solvents are now part of ALTCraft
---	if t == ITEMTYPE_POTION_BASE				then return true end
+	if t == ITEMTYPE_POTION_BASE				then return true end
 	if t == ITEMTYPE_REAGENT     				then return true end
 	if t == ITEMTYPE_POISON_BASE 				then return true end
 	return false
@@ -158,9 +175,11 @@ local function isArchiveType(link, t)
 	-- exceptions
 	if id == ITEMID_CROWN_POTION then return false end
 
-	if t == ITEMTYPE_FOOD then return true end
-	if t == ITEMTYPE_DRINK then return true end
-	if t == ITEMTYPE_POTION then return true end
+	-- skip this; RESERVED mark no longer means to ARCHIVE it...
+	-- XXX: what the heck did I use this for??
+--	if t == ITEMTYPE_FOOD then return true end
+--	if t == ITEMTYPE_DRINK then return true end
+--	if t == ITEMTYPE_POTION then return true end
 	return false
 end
 --=====================================
@@ -197,6 +216,7 @@ local function isRawMat(t)
 		if t == ITEMTYPE_JEWELRYCRAFTING_RAW_MATERIAL	then return true end
 		if t == ITEMTYPE_JEWELRY_RAW_TRAIT	then return true end
 	end
+
 	return false
 end
 
@@ -218,7 +238,8 @@ end
 
 local function isALTCraftMat(link, t)
 	-- return True if this a mat managed automatically by ALTCraftRank 
-	if t == ITEMTYPE_POTION_BASE				then return true end
+-- this was once excluded from isAlchemy; now: just mark as Writ instead
+--	if t == ITEMTYPE_POTION_BASE				then return true end
 	if isEquipMat(t) 							then return true end
 	if isRawMat(t) 								then return true end
 	return false
@@ -333,10 +354,14 @@ function CJRAB.LowestCraftLevelChar(ctype)
 			end
 		end
 		if rank <= min_level then
-			-- XXX: <= takes the last char of that level
 			min_char = char
 			min_level = rank
 		end
+	end
+
+	if min_level == 50 then
+		-- Everyone is at 50; Crafter should do the DE (for max results)
+		min_char = CJRAB.ROLE_CRAFTER
 	end
 --	Dbg("%s has lowest %s crafting (%d)", CJRAB.CharName(min_char),
 --			CJRAB.GetString('CJRAB_SI_CRAFTINGTYPE', ctype), min_level)
@@ -401,14 +426,31 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 			return false
 		end
 
-		if CJRAB.CrafterQualityDC and
-			not isGlyph(link, t) and quality > QUALITY_NORMAL then
-			-- don't get rare mats from low-level alts; send to crafter instead
+		local trait = GetItemLinkTraitInfo(link)
+
+		if CJRAB.CrafterQualityDC and (
+
+				-- You don't get rare mats from low-level alts;
+				-- send higher quality items to crafter instead
+				-- ( quality > QUALITY_NORMAL )
+				( quality > QUALITY_FINE )
+
+				-- send all Glyphs to CRAFTER for more DC mats
+				or isGlyph(link, t)
+
+--				-- send all Platinum jewelry to CRAFTER for more Platinum DC
+--				-- (so not starved of writ mats)
+--				or ( isJewelry(link,t) and
+--						GetItemLinkRequiredChampionPoints(link) >= 150 and
+--						not (trait == ITEM_TRAIT_TYPE_JEWELRY_INTRICATE) ) 
+
+			) then
+
 			if char == CJRAB.ROLE_CRAFTER then
 				-- don't DC any epic CP160 gear?
-				if not CJRAB.BankCP160Gear or
-							quality < QUALITY_EPIC or
-							GetItemLinkRequiredChampionPoints(link) < 160 then
+				if not ( CJRAB.BankCP160Gear and
+						quality >= QUALITY_EPIC and
+						GetItemLinkRequiredChampionPoints(link) >= 160 ) then
 					HoardReason = "for mats deconstruction"
 					if CountCharDC and char == PlayerChar then
 						DeconstructItems[craft] = DeconstructItems[craft] + 1
@@ -417,6 +459,7 @@ local function isForDeconstruction(char, cbag, slot, link, t, quality)
 					return true
 				end
 			end
+
 		else
 			if CJRAB.ALTCraftDistribute[craft] then
 				-- send to char with the lowest skill
@@ -458,9 +501,10 @@ local function isCharSurvey(char, name)
 			if name:find(pat) then
 				-- quester wants it; let them have it.
 				-- XXX: skip Jewelry Surveys for now (until we level it)
-				if not name:find('Jewelry') then
-					return false
-				end
+				-- if not name:find('Jewelry') then
+				--	return false
+				-- end
+				return false
 			end
 		end
 	end
@@ -469,16 +513,71 @@ local function isCharSurvey(char, name)
 	for _, pat in ipairs(CJRAB.CharSurveys[char]) do
 		if name:find(pat) then
 			--  XXX: skip Jewelry Surveys
-			if char == CJRAB.ROLE_QUESTER then
-				if name:find('Jewelry') then
-					return false
-				end
-			end
+			-- if char == CJRAB.ROLE_QUESTER then
+			--	if name:find('Jewelry') then
+			--		return false
+			--	end
+			-- end
 			return true
 		end
 	end
 	return false
 end
+
+--=====================================
+local function fullStackCount(cbag, item)
+	-- Return the number of full stacks of item in cbag (a CloneBag).
+	local count = 0
+	for slot in cbag:Items() do
+		local itm = cbag:GetItem(slot)
+		if itm:CanStackWith(item) then
+			if itm.stack >= itm.max then
+				count = count + 1
+			end
+		end
+	end
+	return count
+end
+
+--=====================================
+local function shouldTakeOverflow(char, item)
+	-- Return true if char has a ROLE_OVRFLW for item type t, 
+	-- and the bank has more than its stack limit of that item.
+	local t = item.t
+	if char == CJRAB.ROLE_OVRFLW_ALCHEMY and isAlchemy(t) then
+		HoardReason = "alchemy overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_ENCHANTING and isEnchant(t) then
+		HoardReason = "enchanting overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_BLACKSMITHING and
+							t == ITEMTYPE_BLACKSMITHING_MATERIAL then
+		HoardReason = "blacksmithing overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_CLOTHIER and
+							t == ITEMTYPE_CLOTHIER_MATERIAL then
+		HoardReason = "clothier overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_WOODWORKING and
+							t == ITEMTYPE_WOODWORKING_MATERIAL then
+		HoardReason = "woodworking overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_JEWELRYCRAFTING and
+							t == ITEMTYPE_JEWELRYCRAFTING_MATERIAL then
+		HoardReason = "jewelrycrafting overflow"
+	elseif char == CJRAB.ROLE_OVRFLW_PROVISIONING and
+							t == ITEMTYPE_INGREDIENT then
+		HoardReason = "ingredient overflow"
+	else
+		return false
+	end
+
+	-- Ok, char is found to be a handler for item's overflow; check stacklimit
+	local craft = GetItemLinkCraftingSkillType(item.link)
+	local limit = CJRAB.BANK_STACKLIMIT[craft]
+	if fullStackCount(CJRAB.TransferBags[BAG_BANK], item) >= limit then
+		return true
+	end
+
+	HoardReason = ""
+	return false
+end
+
 
 --=====================================
 local function isInCharHoard(char, player, cbag, slot)
@@ -510,6 +609,7 @@ local function isInCharHoard(char, player, cbag, slot)
 	-- https://wiki.esoui.com/API
 	-- https://wiki.esoui.com/Constant_Values#ITEMTYPE_ADDITIVE
 	-- https://wiki.esoui.com/Constant_Values#SPECIALIZED_ITEMTYPE_ADDITIVE
+	-- NB: those can be out-of-date; for latest:   /zgoo _G 
 
 	-- surveys for this char
 	if st == SPECIALIZED_ITEMTYPE_TROPHY_SURVEY_REPORT then
@@ -542,6 +642,7 @@ local function isInCharHoard(char, player, cbag, slot)
 		end
 	end
 
+
 	if char == CJRAB.ROLE_ALCHEMY then
 		if isAlchemy(t) and not is_writ(cbag,slot)	then
 			HoardReason = "alchemy hoard"
@@ -558,7 +659,7 @@ local function isInCharHoard(char, player, cbag, slot)
 
 	if char == CJRAB.ROLE_RECIPE then
 		if t == ITEMTYPE_RECIPE and not IsItemLinkRecipeKnown(link) then
-			HoardReason = "provisioning recipe to learn"
+			HoardReason = "crafting recipe to learn"
 			return true
 		end
 	end
@@ -577,7 +678,7 @@ local function isInCharHoard(char, player, cbag, slot)
 			return true
 		end
 		-- current and future craft mats
-		if	quality <= QUALITY_SUPERIOR and
+		if	(quality <= QUALITY_SUPERIOR or CJRAB.ROLE_EPIC == nil ) and
 					isAtLeastCraftRank(CJRAB.CrafterRank, link, t) and
 					not isEqualCraftRank(CJRAB.ALTCraftRank, link, t)  and
 					not is_writ(cbag,slot) then
@@ -585,13 +686,24 @@ local function isInCharHoard(char, player, cbag, slot)
 			return true
 		end
 		-- Equip boosters >= FINE
-		if quality <= QUALITY_SUPERIOR and isEquipBooster(t) then
+		if (quality <= QUALITY_SUPERIOR or CJRAB.ROLE_EPIC == nil ) and
+					isEquipBooster(t) then
 			HoardReason = "crafting boosters"
 			return true
 		end
 		-- Raw mats if we're distributing them
 		if CJRAB.DistribRawMats and isRawMat(t) then
 			HoardReason = "raw mats"
+			return true
+		end
+		-- Master Writs
+		if t == ITEMTYPE_MASTER_WRIT then
+			HoardReason = "master writs"
+			return true
+		end
+		-- new master writ stackable containers...
+		if t == ITEMTYPE_CONTAINER_STACKABLE then
+			HoardReason = "stackable writ container"
 			return true
 		end
 
@@ -729,6 +841,10 @@ local function isInCharHoard(char, player, cbag, slot)
 		end
 	end
 
+	if shouldTakeOverflow(char,item) then
+		return true		-- NB HoardReason set in shouldTakeOverflow
+	end
+
 	return false
 end
 
@@ -765,13 +881,46 @@ local function isInBankHoard(bankBag, cbag, slot)
 	---------------------------------------
 	if bankBag == BAG_BANK then
 
-		if not CJRAB_ROLE_ENCHANT and isEnchant(t)
-				and quality <= QUALITY_SUPERIOR then
+		-- Bank hoards (Alchemy/Enchant)
+		-- NB: Overflow has already been checked
+		if not CJRAB.ROLE_ALCHEMY and isAlchemy(t) then
+			HoardReason = "alchemy hoard in bank"
+			return true
+		end
+		if not CJRAB.ROLE_ENCHANT and isEnchant(t)
+			and ( quality <= QUALITY_SUPERIOR or CJRAB.ROLE_EPIC == nil ) then
 			HoardReason = "enchant hoard in bank"
 			return true
 		end
 
-		if t== ITEMTYPE_RECIPE and IsItemLinkRecipeKnown(link) then
+		-- Equip Writ mats for current ALT rank
+		-- NB: Overflow has already been checked
+		if quality < QUALITY_FINE and
+					isEqualCraftRank(CJRAB.ALTCraftRank, link, t) then
+			HoardReason = "current ALT writ mats"
+			return true
+		end
+
+		-- Alchemy and Provisioning Writ mats (manually marked)
+		-- NB: Overflow has already been checked
+		if isAlchemy(t) or t == ITEMTYPE_INGREDIENT then
+			if is_writ(cbag, slot) then
+				HoardReason = "marked for writs"
+				return true
+			end
+		end
+
+		-- Alchemy and Provisioning crafted Writ items (manually marked)
+		if t == ITEMTYPE_POTION or
+					t == ITEMTYPE_FOOD or
+					t == ITEMTYPE_DRINK then
+			if is_writ(cbag, slot) then
+				HoardReason = "crafted item marked for writs"
+				return true
+			end
+		end
+
+		if t == ITEMTYPE_RECIPE and IsItemLinkRecipeKnown(link) then
 			HoardReason = "recipe for any takers"
 			return true
 		end
@@ -790,31 +939,13 @@ local function isInBankHoard(bankBag, cbag, slot)
 		if st == SPECIALIZED_ITEMTYPE_TROPHY_SCROLL then
 			-- exceptions...
 			local id = GetItemLinkItemId(link)
-			if id ~= ITEMID_COUNTERFEIT_PARDON_EDICT then
+			if ( id ~= ITEMID_COUNTERFEIT_PARDON_EDICT and
+			     id ~= ITEMID_LENIENCY_EDICT ) then
 				HoardReason = "scroll for all to use"
 				return true
 			end
 		end
 
-		-- Equip Writ mats for current ALT rank
-		if quality < QUALITY_FINE and
-					isEqualCraftRank(CJRAB.ALTCraftRank, link, t) then
-			HoardReason = "current ALT writ mats"
-			return true
-		end
-
-		-- Alchemy and Provisioning Writ mats (manually marked)
-		if isAlchemy(t) or
-					t == ITEMTYPE_POTION_BASE or
-					t == ITEMTYPE_POTION or
-					t == ITEMTYPE_INGREDIENT or
-					t == ITEMTYPE_FOOD or
-					t == ITEMTYPE_DRINK then
-			if is_writ(cbag, slot) then
-				HoardReason = "marked for writs"
-				return true
-			end
-		end
 
 		-- Bank all unknown trait Research items for RESEARCHER
 		-- (but leave them in the bank)
@@ -832,6 +963,12 @@ local function isInBankHoard(bankBag, cbag, slot)
 				quality >= QUALITY_EPIC and
 				GetItemLinkRequiredChampionPoints(link) >= 160 then
 			HoardReason = "epic CP160 gear for any takers"
+			return true
+		end
+
+		-- Scribing Mats
+		if t == ITEMTYPE_SCRIBING_INK then
+			HoardReason = "scribing mats for any takers"
 			return true
 		end
 
@@ -885,18 +1022,6 @@ local function depositHoardables( char, bankBag, onlyFillExisting )
 end
 
 --=====================================
-local function isCraftBaggable(item)
-	-- return item.id == 0xb31b		-- Jejota
-	return CanItemLinkBeVirtual(item.link)
-end
-
---=====================================
-local function CJRHasCraftBagAccess()
-	if not CJRAB.EnableCraftBag then return false end
-	return HasCraftBagAccess()
-end
-
---=====================================
 local function withdrawHoardables( char, bankBag )
 	local str, count
 	local bbag = CJRAB.TransferBags[bankBag]
@@ -904,23 +1029,6 @@ local function withdrawHoardables( char, bankBag )
 		HoardReason = ""
 		if isInCharHoard(char, char, bbag, slot) then
 			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
-		elseif CJRHasCraftBagAccess() and 
-									isCraftBaggable(bbag:GetItem(slot)) then
-			HoardReason = "for CraftBag"
-			CJRAB.Transfer(bankBag, slot, BAG_BACKPACK, HoardReason)
-		end
-	end
-end
-
---=====================================
-local function depositCraftBag( char )
-	local str, count
-	local cbag = CJRAB.TransferBags[BAG_BACKPACK]
-	if not CJRHasCraftBagAccess() then return end
-
-	for slot in cbag:Items() do
-		if isCraftBaggable(cbag:GetItem(slot)) then
-			CJRAB.Transfer(BAG_BACKPACK, slot, BAG_VIRTUAL, "")
 		end
 	end
 end
@@ -968,8 +1076,8 @@ local function transferCurrencies(char)
 		-- withdraw all gold
 		withdrawCurrency( char, CURT_MONEY, 0)
 	else
-		-- ALT: deposit all but 999G
-		depositCurrency( char, CURT_MONEY, 999)
+		-- ALT: deposit all but 5000G
+		depositCurrency( char, CURT_MONEY, 5000)
 	end
 	-- deposit all Tel Var stones
 	depositCurrency( char, CURT_TELVAR_STONES, 0)
@@ -1021,20 +1129,13 @@ function CJRAB.OpenBanking(bankBag)
 	-- Initialize all the CloneBags
 	CJRAB.InitTransfer(bankBag)		-- NB: discards any pending transfers
 
-	-- Deposit any CraftBag items to clear space
-	depositCraftBag(char)
-
 	-- Deposit all bankables to existing stacks to clear backpack
 	CountCharDC = true
 	depositHoardables(char, bankBag, true)
 
 	-- Withdraw all char-specific collectibles to clear bank space
-	-- (includes any craftables for CraftBag deposit)
 	CountCharDC = true
 	withdrawHoardables(char, bankBag)
-
-	-- Deposit any CraftBag items again
-	depositCraftBag(char)
 
 	-- Deposit all bankable now
 	CountCharDC = false
@@ -1118,9 +1219,20 @@ function CJRAB.Inventory(bag, slot, reason)
 		isJunk = true
 	end
 
+	-- QUESTER: all potions < CP160 (and not marked for writs - checked below)
+	if ( char == CJRAB.ROLE_QUESTER ) then
+		if ( t == ITEMTYPE_POTION
+				and GetItemLinkRequiredChampionPoints(link) < 160
+				and GetItemLinkItemId(link) ~= ITEMID_CROWN_POTION ) then
+			isJunk = true
+		end
+	end
+
 
 	---------------------------------------
-	if isJunk then
+	if ( isJunk 
+			and not raw_is_writ(bag, slot) 
+			and not raw_is_reserved(bag, slot) ) then
 		Msg("%s marked as junk", CJRAB.ItemName(bag, slot))
 		SetItemIsJunk(bag, slot, true)
 	end
